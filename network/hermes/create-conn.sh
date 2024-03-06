@@ -6,7 +6,7 @@ set -e
 
 ### Configure the clients and connection
 echo "Initiating connection handshake..."
-$HERMES_BINARY --config $CONFIG_DIR create connection --a-chain test-1 --b-chain test-2
+$HERMES_BINARY --config $CONFIG_DIR create connection --a-chain neutron-devnet-1 --b-chain cosmoshub-devnet-1
 
 sleep 2
-$HERMES_BINARY --config $CONFIG_DIR create channel --a-chain test-1 --a-connection connection-0 --a-port transfer --b-port transfer
+$HERMES_BINARY --config $CONFIG_DIR create channel --a-chain neutron-devnet-1 --a-connection connection-0 --a-port transfer --b-port transfer

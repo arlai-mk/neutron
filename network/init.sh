@@ -16,6 +16,8 @@ ROSETTA=${ROSETTA:-8081}
 
 VAL_MNEMONIC_1="clock post desk civil pottery foster expand merit dash seminar song memory figure uniform spice circle try happy obvious trash crime hybrid hood cushion"
 VAL_MNEMONIC_2="angry twist harsh drastic left brass behave host shove marriage fall update business leg direct reward object ugly security warm tuna model broccoli choice"
+VAL_MNEMONIC_3="grit never top illness dawn trumpet inch awkward parade unlock all swim heart awkward predict clean alpha already vocal collect agree pill dragon pipe"
+VAL_MNEMONIC_4="weapon aim sail sick twelve clarify recall talent shift chalk travel firm view amused salute front honey charge endorse road shine message buyer fine"
 DEMO_MNEMONIC_1="banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass"
 DEMO_MNEMONIC_2="veteran try aware erosion drink dance decade comic dawn museum release episode original list ability owner size tuition surface ceiling depth seminar capable only"
 DEMO_MNEMONIC_3="obscure canal because tomorrow tribe sibling describe satoshi kiwi upgrade bless empty math trend erosion oblige donate label birth chronic hazard ensure wreck shine"
@@ -26,6 +28,11 @@ RLY_MNEMONIC_2="record gift you once hip style during joke field prize dust uniq
 if pgrep -x "$BINARY" >/dev/null; then
     echo "Terminating $BINARY..."
     killall "$BINARY"
+fi
+
+# For Gaia, we have different nodes
+if [ "$BINARY" == "gaiad" ]; then
+    CHAIN_DIR="$CHAIN_DIR/$NODE"
 fi
 
 echo "Removing previous data..."
@@ -43,23 +50,29 @@ $BINARY init test --home "$CHAIN_DIR" --chain-id="$CHAINID"
 echo "Adding genesis accounts..."
 echo "$VAL_MNEMONIC_1" | $BINARY keys add val1 --home "$CHAIN_DIR" --recover --keyring-backend=test
 echo "$VAL_MNEMONIC_2" | $BINARY keys add val2 --home "$CHAIN_DIR" --recover --keyring-backend=test
+echo "$VAL_MNEMONIC_3" | $BINARY keys add val3 --home "$CHAIN_DIR" --recover --keyring-backend=test
+echo "$VAL_MNEMONIC_4" | $BINARY keys add val4 --home "$CHAIN_DIR" --recover --keyring-backend=test
 echo "$DEMO_MNEMONIC_1" | $BINARY keys add demowallet1 --home "$CHAIN_DIR" --recover --keyring-backend=test
 echo "$DEMO_MNEMONIC_2" | $BINARY keys add demowallet2 --home "$CHAIN_DIR" --recover --keyring-backend=test
 echo "$DEMO_MNEMONIC_3" | $BINARY keys add demowallet3 --home "$CHAIN_DIR" --recover --keyring-backend=test
 echo "$RLY_MNEMONIC_1" | $BINARY keys add rly1 --home "$CHAIN_DIR" --recover --keyring-backend=test
 echo "$RLY_MNEMONIC_2" | $BINARY keys add rly2 --home "$CHAIN_DIR" --recover --keyring-backend=test
 
-$BINARY add-genesis-account "$($BINARY --home "$CHAIN_DIR" keys show val1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
-$BINARY add-genesis-account "$($BINARY --home "$CHAIN_DIR" keys show val2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
-$BINARY add-genesis-account "$($BINARY --home "$CHAIN_DIR" keys show demowallet1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
-$BINARY add-genesis-account "$($BINARY --home "$CHAIN_DIR" keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
-$BINARY add-genesis-account "$($BINARY --home "$CHAIN_DIR" keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
-$BINARY add-genesis-account "$($BINARY --home "$CHAIN_DIR" keys show rly1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
-$BINARY add-genesis-account "$($BINARY --home "$CHAIN_DIR" keys show rly2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show val1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show val2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show val3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show val4 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show demowallet1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show rly1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+$BINARY add-genesis-account "$($BINARY keys show rly2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
 
 sed -i -e 's/timeout_commit = "5s"/timeout_commit = "1s"/g' "$CHAIN_DIR/config/config.toml"
 sed -i -e 's/timeout_propose = "3s"/timeout_propose = "1s"/g' "$CHAIN_DIR/config/config.toml"
 sed -i -e 's/index_all_keys = false/index_all_keys = true/g' "$CHAIN_DIR/config/config.toml"
+sed -i -e 's/allow_duplicate_ip = false/allow_duplicate_ip = true/g' "$CHAIN_DIR/config/config.toml"
+
 sed -i -e 's/enable = false/enable = true/g' "$CHAIN_DIR/config/app.toml"
 sed -i -e 's/swagger = false/swagger = true/g' "$CHAIN_DIR/config/app.toml"
 sed -i -e "s/minimum-gas-prices = \"\"/minimum-gas-prices = \"0.0025$STAKEDENOM,0.0025ibc\/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2\"/g" "$CHAIN_DIR/config/app.toml"
