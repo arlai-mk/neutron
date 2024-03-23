@@ -84,3 +84,5 @@ export GRPCWEB=12091
 "$script_full_path"/start.sh
 
 sleep 10
+
+"$script_full_path"/send-tokens.sh
