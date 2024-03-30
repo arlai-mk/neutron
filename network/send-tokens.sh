@@ -35,6 +35,30 @@ do
   sleep 2.5 # otherwise I get some mismatch sequence... (could also just do a multisend, if possible from command line?)
 done
 
+# Do the validator bond for Liquid Staking
+declare -a valoper_addresses=(
+  "cosmosvaloper18hl5c9xn5dze2g50uaw0l2mr02ew57zk0auktn" # Moonkitt (val1)
+  "cosmosvaloper1qnk2n4nlkpw9xfqntladh74w6ujtulwnmxnh3k" # Crosnest (val2)
+  "cosmosvaloper1tdchzcvgmq4dqvar90hjpgh6l6me9x7z832vlr" # High Stakes (val3)
+  "cosmosvaloper1zthtxtyqdgp6ne6lfp0fv9gc7dddlc8qdx4trs" # StakeLab (val4)
+)
+
+ITER=0
+for valoper_address in "${valoper_addresses[@]}"; do 
+  ITER=$(expr $ITER + 1)
+  echo y |
+  $BINARY tx staking validator-bond \
+    "$valoper_address" \
+    --gas-prices 0.1$STAKEDENOM \
+    --gas-adjustment 1.3 \
+    --from "val${ITER}" \
+    --keyring-backend test \
+    --home "$CHAIN_DIR" \
+    --chain-id $CHAINID \
+    --node $HOST
+done
+
+
 #---------------- NEUTRON 
 
 declare -a neutron_addresses=(
