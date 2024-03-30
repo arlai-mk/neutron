@@ -57,6 +57,9 @@ elif [ "$NODE" == "node1" ]; then
     $BINARY genesis collect-gentxs --home "$CHAIN_DIR"
 
     sed -i -e '/allow_messages/{ N; s/\*/\/cosmos.bank.v1beta1.MsgSend\", \"\/cosmos.staking.v1beta1.MsgDelegate\", \"\/cosmos.staking.v1beta1.MsgUndelegate/ }' "$CHAIN_DIR/config/genesis.json"
+    sed -i -e 's/\"validator_bond_factor\":.*/\"validator_bond_factor\": \"250.000000000000000000\",/g' "$CHAIN_DIR/config/genesis.json"
+    sed -i -e 's/\"global_liquid_staking_cap\":.*/\"global_liquid_staking_cap\": \"0.250000000000000000\",/g' "$CHAIN_DIR/config/genesis.json"
+
     cp -f "$CHAIN_DIR/config/genesis.json" "$BASE_DIR/$CHAINID/node2/config/"
     cp -f "$CHAIN_DIR/config/genesis.json" "$BASE_DIR/$CHAINID/node3/config/"
     cp -f "$CHAIN_DIR/config/genesis.json" "$BASE_DIR/$CHAINID/node4/config/"
