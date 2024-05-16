@@ -7,10 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 
+	"github.com/cosmos/cosmos-sdk/testutil/sims"
 	globalfeetypes "github.com/cosmos/gaia/v11/x/globalfee/types"
 	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward"
-	"github.com/cosmos/interchain-security/v3/testutil/integration"
+	ibctestingtypes "github.com/cosmos/ibc-go/v7/testing/types"
+	"github.com/cosmos/interchain-security/v4/testutil/integration"
+	ccv "github.com/cosmos/interchain-security/v4/x/ccv/types"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
@@ -18,15 +22,16 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 
-	"github.com/neutron-org/neutron/v2/docs"
+	"github.com/neutron-org/neutron/v3/docs"
 
-	"github.com/neutron-org/neutron/v2/app/upgrades"
-	"github.com/neutron-org/neutron/v2/app/upgrades/v0.3.0"
-	"github.com/neutron-org/neutron/v2/app/upgrades/v0.4.4"
-	"github.com/neutron-org/neutron/v2/app/upgrades/v2.0.0"
-	"github.com/neutron-org/neutron/v2/app/upgrades/v2.0.2"
+	"github.com/neutron-org/neutron/v3/app/upgrades"
+	v030 "github.com/neutron-org/neutron/v3/app/upgrades/v0.3.0"
+	v044 "github.com/neutron-org/neutron/v3/app/upgrades/v0.4.4"
+	v200 "github.com/neutron-org/neutron/v3/app/upgrades/v2.0.0"
+	v202 "github.com/neutron-org/neutron/v3/app/upgrades/v2.0.2"
+	v301 "github.com/neutron-org/neutron/v3/app/upgrades/v3.0.1"
 
-	"github.com/neutron-org/neutron/v2/x/cron"
+	"github.com/neutron-org/neutron/v3/x/cron"
 
 	"github.com/CosmWasm/wasmd/x/wasm"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
@@ -99,18 +104,17 @@ import (
 	ibcporttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
-	"github.com/cosmos/interchain-security/v3/legacy_ibc_testing/core"
-	ibctesting "github.com/cosmos/interchain-security/v3/legacy_ibc_testing/testing"
+	ibctesting "github.com/cosmos/ibc-go/v7/testing"
 	"github.com/spf13/cast"
 
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
-	cronkeeper "github.com/neutron-org/neutron/v2/x/cron/keeper"
-	crontypes "github.com/neutron-org/neutron/v2/x/cron/types"
+	cronkeeper "github.com/neutron-org/neutron/v3/x/cron/keeper"
+	crontypes "github.com/neutron-org/neutron/v3/x/cron/types"
 
-	"github.com/neutron-org/neutron/v2/x/tokenfactory"
-	tokenfactorykeeper "github.com/neutron-org/neutron/v2/x/tokenfactory/keeper"
-	tokenfactorytypes "github.com/neutron-org/neutron/v2/x/tokenfactory/types"
+	"github.com/neutron-org/neutron/v3/x/tokenfactory"
+	tokenfactorykeeper "github.com/neutron-org/neutron/v3/x/tokenfactory/keeper"
+	tokenfactorytypes "github.com/neutron-org/neutron/v3/x/tokenfactory/types"
 
 	"github.com/cosmos/admin-module/x/adminmodule"
 	adminmodulecli "github.com/cosmos/admin-module/x/adminmodule/client/cli"
@@ -119,32 +123,32 @@ import (
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	appparams "github.com/neutron-org/neutron/v2/app/params"
-	"github.com/neutron-org/neutron/v2/wasmbinding"
-	"github.com/neutron-org/neutron/v2/x/contractmanager"
-	contractmanagermodulekeeper "github.com/neutron-org/neutron/v2/x/contractmanager/keeper"
-	contractmanagermoduletypes "github.com/neutron-org/neutron/v2/x/contractmanager/types"
-	"github.com/neutron-org/neutron/v2/x/feeburner"
-	feeburnerkeeper "github.com/neutron-org/neutron/v2/x/feeburner/keeper"
-	feeburnertypes "github.com/neutron-org/neutron/v2/x/feeburner/types"
-	"github.com/neutron-org/neutron/v2/x/feerefunder"
-	feekeeper "github.com/neutron-org/neutron/v2/x/feerefunder/keeper"
-	ibchooks "github.com/neutron-org/neutron/v2/x/ibc-hooks"
-	ibchookstypes "github.com/neutron-org/neutron/v2/x/ibc-hooks/types"
-	"github.com/neutron-org/neutron/v2/x/interchainqueries"
-	interchainqueriesmodulekeeper "github.com/neutron-org/neutron/v2/x/interchainqueries/keeper"
-	interchainqueriesmoduletypes "github.com/neutron-org/neutron/v2/x/interchainqueries/types"
-	"github.com/neutron-org/neutron/v2/x/interchaintxs"
-	interchaintxskeeper "github.com/neutron-org/neutron/v2/x/interchaintxs/keeper"
-	interchaintxstypes "github.com/neutron-org/neutron/v2/x/interchaintxs/types"
-	transferSudo "github.com/neutron-org/neutron/v2/x/transfer"
-	wrapkeeper "github.com/neutron-org/neutron/v2/x/transfer/keeper"
+	appparams "github.com/neutron-org/neutron/v3/app/params"
+	"github.com/neutron-org/neutron/v3/wasmbinding"
+	"github.com/neutron-org/neutron/v3/x/contractmanager"
+	contractmanagermodulekeeper "github.com/neutron-org/neutron/v3/x/contractmanager/keeper"
+	contractmanagermoduletypes "github.com/neutron-org/neutron/v3/x/contractmanager/types"
+	"github.com/neutron-org/neutron/v3/x/feeburner"
+	feeburnerkeeper "github.com/neutron-org/neutron/v3/x/feeburner/keeper"
+	feeburnertypes "github.com/neutron-org/neutron/v3/x/feeburner/types"
+	"github.com/neutron-org/neutron/v3/x/feerefunder"
+	feekeeper "github.com/neutron-org/neutron/v3/x/feerefunder/keeper"
+	ibchooks "github.com/neutron-org/neutron/v3/x/ibc-hooks"
+	ibchookstypes "github.com/neutron-org/neutron/v3/x/ibc-hooks/types"
+	"github.com/neutron-org/neutron/v3/x/interchainqueries"
+	interchainqueriesmodulekeeper "github.com/neutron-org/neutron/v3/x/interchainqueries/keeper"
+	interchainqueriesmoduletypes "github.com/neutron-org/neutron/v3/x/interchainqueries/types"
+	"github.com/neutron-org/neutron/v3/x/interchaintxs"
+	interchaintxskeeper "github.com/neutron-org/neutron/v3/x/interchaintxs/keeper"
+	interchaintxstypes "github.com/neutron-org/neutron/v3/x/interchaintxs/types"
+	transferSudo "github.com/neutron-org/neutron/v3/x/transfer"
+	wrapkeeper "github.com/neutron-org/neutron/v3/x/transfer/keeper"
 
-	feetypes "github.com/neutron-org/neutron/v2/x/feerefunder/types"
+	feetypes "github.com/neutron-org/neutron/v3/x/feerefunder/types"
 
-	ccvconsumer "github.com/cosmos/interchain-security/v3/x/ccv/consumer"
-	ccvconsumerkeeper "github.com/cosmos/interchain-security/v3/x/ccv/consumer/keeper"
-	ccvconsumertypes "github.com/cosmos/interchain-security/v3/x/ccv/consumer/types"
+	ccvconsumer "github.com/cosmos/interchain-security/v4/x/ccv/consumer"
+	ccvconsumerkeeper "github.com/cosmos/interchain-security/v4/x/ccv/consumer/keeper"
+	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
@@ -152,15 +156,26 @@ import (
 	pfmkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward/keeper"
 	pfmtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward/types"
 
-	"github.com/neutron-org/neutron/v2/x/dex"
-	dexkeeper "github.com/neutron-org/neutron/v2/x/dex/keeper"
-	dextypes "github.com/neutron-org/neutron/v2/x/dex/types"
+	"github.com/neutron-org/neutron/v3/x/dex"
+	dexkeeper "github.com/neutron-org/neutron/v3/x/dex/keeper"
+	dextypes "github.com/neutron-org/neutron/v3/x/dex/types"
 
-	"github.com/neutron-org/neutron/v2/x/ibcswap"
-	ibcswapkeeper "github.com/neutron-org/neutron/v2/x/ibcswap/keeper"
-	ibcswaptypes "github.com/neutron-org/neutron/v2/x/ibcswap/types"
+	"github.com/neutron-org/neutron/v3/x/ibcswap"
+	ibcswapkeeper "github.com/neutron-org/neutron/v3/x/ibcswap/keeper"
+	ibcswaptypes "github.com/neutron-org/neutron/v3/x/ibcswap/types"
 
-	gmpmiddleware "github.com/neutron-org/neutron/v2/x/gmp"
+	gmpmiddleware "github.com/neutron-org/neutron/v3/x/gmp"
+
+	// Block-sdk imports
+	blocksdkabci "github.com/skip-mev/block-sdk/abci"
+	blocksdk "github.com/skip-mev/block-sdk/block"
+	"github.com/skip-mev/block-sdk/x/auction"
+	auctionkeeper "github.com/skip-mev/block-sdk/x/auction/keeper"
+	rewardsaddressprovider "github.com/skip-mev/block-sdk/x/auction/rewards"
+	auctiontypes "github.com/skip-mev/block-sdk/x/auction/types"
+
+	"github.com/skip-mev/block-sdk/abci/checktx"
+	"github.com/skip-mev/block-sdk/block/base"
 )
 
 const (
@@ -168,7 +183,7 @@ const (
 )
 
 var (
-	Upgrades = []upgrades.Upgrade{v030.Upgrade, v044.Upgrade, v200.Upgrade, v202.Upgrade}
+	Upgrades = []upgrades.Upgrade{v030.Upgrade, v044.Upgrade, v200.Upgrade, v202.Upgrade, v301.Upgrade}
 
 	// DefaultNodeHome default home directories for the application daemon
 	DefaultNodeHome string
@@ -215,6 +230,7 @@ var (
 		),
 		ibchooks.AppModuleBasic{},
 		packetforward.AppModuleBasic{},
+		auction.AppModuleBasic{},
 		globalfee.AppModule{},
 		dex.AppModuleBasic{},
 		ibcswap.AppModuleBasic{},
@@ -223,6 +239,7 @@ var (
 	// module account permissions
 	maccPerms = map[string][]string{
 		authtypes.FeeCollectorName:                    nil,
+		auctiontypes.ModuleName:                       nil,
 		ibctransfertypes.ModuleName:                   {authtypes.Minter, authtypes.Burner},
 		icatypes.ModuleName:                           nil,
 		wasmtypes.ModuleName:                          {},
@@ -275,10 +292,12 @@ type App struct {
 	memKeys map[string]*storetypes.MemoryStoreKey
 
 	// keepers
-	AccountKeeper       authkeeper.AccountKeeper
-	AdminmoduleKeeper   adminmodulekeeper.Keeper
-	AuthzKeeper         authzkeeper.Keeper
-	BankKeeper          bankkeeper.BaseKeeper
+	AccountKeeper     authkeeper.AccountKeeper
+	AdminmoduleKeeper adminmodulekeeper.Keeper
+	AuthzKeeper       authzkeeper.Keeper
+	BankKeeper        bankkeeper.BaseKeeper
+	// AuctionKeeper handles the processing of bid-txs, the selection of winners per height, and the distribution of rewards.
+	AuctionKeeper       auctionkeeper.Keeper
 	CapabilityKeeper    *capabilitykeeper.Keeper
 	SlashingKeeper      slashingkeeper.Keeper
 	CrisisKeeper        crisiskeeper.Keeper
@@ -324,6 +343,10 @@ type App struct {
 
 	// sm is the simulation manager
 	sm *module.SimulationManager
+
+	// Custom checkTx handler -> this check-tx is used to simulate txs that are
+	// wrapped in a bid-tx
+	checkTxHandler checktx.CheckTx
 }
 
 func (app *App) GetTestBankKeeper() integration.TestBankKeeper {
@@ -374,7 +397,7 @@ func New(
 		icahosttypes.StoreKey, capabilitytypes.StoreKey,
 		interchainqueriesmoduletypes.StoreKey, contractmanagermoduletypes.StoreKey, interchaintxstypes.StoreKey, wasmtypes.StoreKey, feetypes.StoreKey,
 		feeburnertypes.StoreKey, adminmoduletypes.StoreKey, ccvconsumertypes.StoreKey, tokenfactorytypes.StoreKey, pfmtypes.StoreKey,
-		crontypes.StoreKey, ibchookstypes.StoreKey, consensusparamtypes.StoreKey, crisistypes.StoreKey, dextypes.StoreKey,
+		crontypes.StoreKey, ibchookstypes.StoreKey, consensusparamtypes.StoreKey, crisistypes.StoreKey, dextypes.StoreKey, auctiontypes.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey, feetypes.MemStoreKey)
@@ -495,7 +518,14 @@ func New(
 		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
 	)
 
-	app.FeeKeeper = feekeeper.NewKeeper(appCodec, keys[feetypes.StoreKey], memKeys[feetypes.MemStoreKey], app.IBCKeeper.ChannelKeeper, app.BankKeeper, authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String())
+	app.FeeKeeper = feekeeper.NewKeeper(
+		appCodec,
+		keys[feetypes.StoreKey],
+		memKeys[feetypes.MemStoreKey],
+		app.IBCKeeper.ChannelKeeper,
+		app.BankKeeper,
+		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
+	)
 	feeModule := feerefunder.NewAppModule(appCodec, *app.FeeKeeper, app.AccountKeeper, app.BankKeeper)
 
 	app.FeeBurnerKeeper = feeburnerkeeper.NewKeeper(
@@ -575,8 +605,9 @@ func New(
 	tokenFactoryKeeper := tokenfactorykeeper.NewKeeper(
 		appCodec,
 		app.keys[tokenfactorytypes.StoreKey],
+		maccPerms,
 		app.AccountKeeper,
-		app.BankKeeper.WithMintCoinsRestriction(tokenfactorytypes.NewTokenFactoryDenomMintCoinsRestriction()),
+		&app.BankKeeper,
 		&app.WasmKeeper,
 		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
 	)
@@ -592,6 +623,16 @@ func New(
 		keys[dextypes.StoreKey],
 		keys[dextypes.MemStoreKey],
 		app.BankKeeper.WithMintCoinsRestriction(dextypes.NewDexDenomMintCoinsRestriction()),
+		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
+	)
+
+	app.AuctionKeeper = auctionkeeper.NewKeeperWithRewardsAddressProvider(
+		appCodec,
+		keys[auctiontypes.StoreKey],
+		app.AccountKeeper,
+		&app.BankKeeper,
+		// 25% of rewards should be sent to the redistribute address
+		rewardsaddressprovider.NewFixedAddressRewardsAddressProvider(app.AccountKeeper.GetModuleAddress(ccvconsumertypes.ConsumerRedistributeName)),
 		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
 	)
 
@@ -661,8 +702,24 @@ func New(
 		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
 	)
 
-	app.CronKeeper = *cronkeeper.NewKeeper(appCodec, keys[crontypes.StoreKey], keys[crontypes.MemStoreKey], app.AccountKeeper, authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String())
-	wasmOpts = append(wasmbinding.RegisterCustomPlugins(&app.InterchainTxsKeeper, &app.InterchainQueriesKeeper, app.TransferKeeper, &app.AdminmoduleKeeper, app.FeeBurnerKeeper, app.FeeKeeper, &app.BankKeeper, app.TokenFactoryKeeper, &app.CronKeeper, &app.ContractManagerKeeper), wasmOpts...)
+	app.CronKeeper = *cronkeeper.NewKeeper(
+		appCodec,
+		keys[crontypes.StoreKey],
+		keys[crontypes.MemStoreKey],
+		app.AccountKeeper,
+		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
+	)
+	wasmOpts = append(wasmbinding.RegisterCustomPlugins(
+		&app.InterchainTxsKeeper,
+		&app.InterchainQueriesKeeper,
+		app.TransferKeeper,
+		&app.AdminmoduleKeeper,
+		app.FeeBurnerKeeper,
+		app.FeeKeeper, &app.BankKeeper,
+		app.TokenFactoryKeeper, &app.CronKeeper,
+		&app.ContractManagerKeeper,
+		&app.DexKeeper,
+	), wasmOpts...)
 
 	queryPlugins := wasmkeeper.WithQueryPlugins(
 		&wasmkeeper.QueryPlugins{Stargate: wasmkeeper.AcceptListStargateQuerier(wasmbinding.AcceptedStargateQueries(), app.GRPCQueryRouter(), appCodec)})
@@ -779,7 +836,9 @@ func New(
 		globalfee.NewAppModule(app.GetSubspace(globalfee.ModuleName)),
 		swapModule,
 		dexModule,
-		crisis.NewAppModule(&app.CrisisKeeper, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)), // always be last to make sure that it checks for all invariants and not only part of them
+		auction.NewAppModule(appCodec, app.AuctionKeeper),
+		// always be last to make sure that it checks for all invariants and not only part of them
+		crisis.NewAppModule(&app.CrisisKeeper, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)),
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -787,6 +846,7 @@ func New(
 	// CanWithdrawInvariant invariant.
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	app.mm.SetOrderBeginBlockers(
+		auctiontypes.ModuleName,
 		upgradetypes.ModuleName,
 		capabilitytypes.ModuleName,
 		slashingtypes.ModuleName,
@@ -819,6 +879,7 @@ func New(
 	)
 
 	app.mm.SetOrderEndBlockers(
+		auctiontypes.ModuleName,
 		crisistypes.ModuleName,
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
@@ -858,6 +919,7 @@ func New(
 	// so that other modules that want to create or claim capabilities afterwards in InitChain
 	// can do so safely.
 	app.mm.SetOrderInitGenesis(
+		auctiontypes.ModuleName,
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		ibctransfertypes.ModuleName,
@@ -928,6 +990,19 @@ func New(
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 
+	app.SetEndBlocker(app.EndBlocker)
+
+	// create the lanes
+	mevLane, baseLane := app.CreateLanes()
+	mempool, err := blocksdk.NewLanedMempool(app.Logger(), []blocksdk.Lane{mevLane, baseLane})
+	if err != nil {
+		panic(err)
+	}
+
+	// set the mempool first
+	app.SetMempool(mempool)
+
+	// then create the ante-handler
 	anteHandler, err := NewAnteHandler(
 		HandlerOptions{
 			HandlerOptions: ante.HandlerOptions{
@@ -942,16 +1017,57 @@ func New(
 			TXCounterStoreKey: keys[wasmtypes.StoreKey],
 			ConsumerKeeper:    app.ConsumerKeeper,
 			GlobalFeeSubspace: app.GetSubspace(globalfee.ModuleName),
+			AuctionKeeper:     app.AuctionKeeper,
+			TxEncoder:         app.GetTxConfig().TxEncoder(),
+			MEVLane:           mevLane,
 		},
 		app.Logger(),
 	)
 	if err != nil {
 		panic(err)
 	}
-
 	app.SetAnteHandler(anteHandler)
 
-	app.SetEndBlocker(app.EndBlocker)
+	// set ante-handlers
+	opts := []base.LaneOption{
+		base.WithAnteHandler(anteHandler),
+	}
+	baseLane.WithOptions(opts...)
+	mevLane.WithOptions(opts...)
+
+	// set the block-sdk prepare / process-proposal handlers
+	handler := blocksdkabci.NewProposalHandler(
+		app.Logger(),
+		app.GetTxConfig().TxDecoder(),
+		app.GetTxConfig().TxEncoder(),
+		mempool,
+	)
+	app.SetPrepareProposal(handler.PrepareProposalHandler())
+
+	// we use a no-op ProcessProposal, this way, we accept all proposals in avoidance
+	// of liveness failures due to Prepare / Process inconsistency. In other words,
+	// this ProcessProposal always returns ACCEPT.
+	app.SetProcessProposal(baseapp.NoOpProcessProposal())
+
+	// block-sdk CheckTx handler
+	mevCheckTxHandler := checktx.NewMEVCheckTxHandler(
+		app,
+		app.GetTxConfig().TxDecoder(),
+		mevLane,
+		anteHandler,
+		app.BaseApp.CheckTx,
+		app.ChainID(),
+	)
+
+	// wrap checkTxHandler with mempool parity handler
+	parityCheckTx := checktx.NewMempoolParityCheckTx(
+		app.Logger(),
+		mempool,
+		app.GetTxConfig().TxDecoder(),
+		mevCheckTxHandler.CheckTx(),
+	)
+
+	app.SetCheckTx(parityCheckTx.CheckTx())
 
 	// must be before Loading version
 	// requires the snapshot store to be created and registered as a BaseAppOption
@@ -966,16 +1082,7 @@ func New(
 	}
 
 	if loadLatest {
-		if err := app.LoadLatestVersion(); err != nil {
-			tmos.Exit(err.Error())
-		}
-
-		ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
-
-		// Initialize pinned codes in wasmvm as they are not persisted there
-		if err := app.WasmKeeper.InitializePinnedCodes(ctx); err != nil {
-			tmos.Exit(fmt.Sprintf("failed initialize pinned codes %s", err))
-		}
+		app.LoadLatest()
 	}
 
 	app.ScopedIBCKeeper = scopedIBCKeeper
@@ -985,6 +1092,19 @@ func New(
 	app.ScopedCCVConsumerKeeper = scopedCCVConsumerKeeper
 
 	return app
+}
+
+func (app *App) LoadLatest() {
+	if err := app.LoadLatestVersion(); err != nil {
+		tmos.Exit(err.Error())
+	}
+
+	ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+
+	// Initialize pinned codes in wasmvm as they are not persisted there
+	if err := app.WasmKeeper.InitializePinnedCodes(ctx); err != nil {
+		tmos.Exit(fmt.Sprintf("failed initialize pinned codes %s", err))
+	}
 }
 
 func (app *App) setupUpgradeStoreLoaders() {
@@ -998,6 +1118,7 @@ func (app *App) setupUpgradeStoreLoaders() {
 	}
 
 	for _, upgrd := range Upgrades {
+		upgrd := upgrd
 		if upgradeInfo.Name == upgrd.UpgradeName {
 			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgrd.StoreUpgrades))
 		}
@@ -1014,15 +1135,19 @@ func (app *App) setupUpgradeHandlers() {
 				&upgrades.UpgradeKeepers{
 					AccountKeeper:       app.AccountKeeper,
 					FeeBurnerKeeper:     app.FeeBurnerKeeper,
+					BankKeeper:          app.BankKeeper,
+					TransferKeeper:      app.TransferKeeper.Keeper,
 					CronKeeper:          app.CronKeeper,
 					IcqKeeper:           app.InterchainQueriesKeeper,
 					TokenFactoryKeeper:  app.TokenFactoryKeeper,
 					SlashingKeeper:      app.SlashingKeeper,
 					ParamsKeeper:        app.ParamsKeeper,
 					CapabilityKeeper:    app.CapabilityKeeper,
+					AuctionKeeper:       app.AuctionKeeper,
 					ContractManager:     app.ContractManagerKeeper,
 					AdminModule:         app.AdminmoduleKeeper,
 					ConsensusKeeper:     &app.ConsensusParamsKeeper,
+					ConsumerKeeper:      &app.ConsumerKeeper,
 					GlobalFeeSubspace:   app.GetSubspace(globalfee.ModuleName),
 					CcvConsumerSubspace: app.GetSubspace(ccvconsumertypes.ModuleName),
 				},
@@ -1031,6 +1156,26 @@ func (app *App) setupUpgradeHandlers() {
 			),
 		)
 	}
+}
+
+// ChainID gets chainID from private fields of BaseApp
+// Should be removed once SDK 0.50.x will be adopted
+func (app *App) ChainID() string {
+	field := reflect.ValueOf(app.BaseApp).Elem().FieldByName("chainID")
+	return field.String()
+}
+
+// CheckTx will check the transaction with the provided checkTxHandler. We override the default
+// handler so that we can verify bid transactions before they are inserted into the mempool.
+// With the Block-SDK CheckTx, we can verify the bid transaction and all of the bundled transactions
+// before inserting the bid transaction into the mempool.
+func (app *App) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
+	return app.checkTxHandler(req)
+}
+
+// SetCheckTx sets the checkTxHandler for the app.
+func (app *App) SetCheckTx(handler checktx.CheckTx) {
+	app.checkTxHandler = handler
 }
 
 // Name returns the name of the App
@@ -1065,6 +1210,22 @@ func (app *App) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.Res
 		panic(err)
 	}
 	app.EnsureBlockGasMeter(ctx)
+	app.UpgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
+	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
+}
+
+// InitChainer application update at chain initialization
+// ONLY FOR TESTING PURPOSES
+func (app *App) TestInitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	var genesisState GenesisState
+	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
+		panic(err)
+	}
+
+	// manually set consensus params here, cause there is no way to set it using ibctesting stuff for now
+	app.ConsensusParamsKeeper.Set(ctx, sims.DefaultConsensusParams)
+	app.EnsureBlockGasMeter(ctx)
+
 	app.UpgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
@@ -1186,7 +1347,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 
 	paramsKeeper.Subspace(globalfee.ModuleName).WithKeyTable(globalfeetypes.ParamKeyTable())
 
-	paramsKeeper.Subspace(ccvconsumertypes.ModuleName).WithKeyTable(ccvconsumertypes.ParamKeyTable())
+	paramsKeeper.Subspace(ccvconsumertypes.ModuleName).WithKeyTable(ccv.ParamKeyTable())
 
 	// MOTE: legacy subspaces for migration sdk47 only
 	paramsKeeper.Subspace(wasmtypes.ModuleName).WithKeyTable(wasmtypes.ParamKeyTable()) //nolint:staticcheck
@@ -1229,7 +1390,7 @@ func (app *App) GetIBCKeeper() *ibckeeper.Keeper {
 }
 
 // GetStakingKeeper implements the TestingApp interface.
-func (app *App) GetStakingKeeper() core.StakingKeeper {
+func (app *App) GetStakingKeeper() ibctestingtypes.StakingKeeper {
 	return app.ConsumerKeeper
 }
 

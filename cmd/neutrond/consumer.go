@@ -15,10 +15,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	ccvconsumertypes "github.com/cosmos/interchain-security/v3/x/ccv/consumer/types"
+	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
 	"github.com/spf13/cobra"
 
-	"github.com/neutron-org/neutron/v2/testutil/consumer"
+	"github.com/neutron-org/neutron/v3/testutil/consumer"
 )
 
 func AddConsumerSectionCmd(defaultNodeHome string) *cobra.Command {
@@ -28,7 +28,7 @@ func AddConsumerSectionCmd(defaultNodeHome string) *cobra.Command {
 		Use:                        "add-consumer-section",
 		Short:                      "ONLY FOR TESTING PURPOSES! Modifies genesis so that chain can be started locally with one node.",
 		SuggestionsMinimumDistance: 2,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return genesisMutator.AlterConsumerModuleState(cmd, func(state *GenesisData, _ map[string]json.RawMessage) error {
 				genesisState := consumer.CreateMinimalConsumerTestGenesis()
 				clientCtx := client.GetClientContextFromCmd(cmd)
@@ -55,8 +55,8 @@ func AddConsumerSectionCmd(defaultNodeHome string) *cobra.Command {
 					return errors.Wrap(err, "could not convert val updates to validator set")
 				}
 
-				genesisState.InitialValSet = initialValset
-				genesisState.ProviderConsensusState.NextValidatorsHash = tmtypes.NewValidatorSet(vals).Hash()
+				genesisState.Provider.InitialValSet = initialValset
+				genesisState.Provider.ConsensusState.NextValidatorsHash = tmtypes.NewValidatorSet(vals).Hash()
 
 				state.ConsumerModuleState = genesisState
 

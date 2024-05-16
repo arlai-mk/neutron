@@ -15,16 +15,18 @@ import (
 	icahosttypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/host/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	ibcclienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	ccvconsumertypes "github.com/cosmos/interchain-security/v3/x/ccv/consumer/types"
+	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
+	ccv "github.com/cosmos/interchain-security/v4/x/ccv/types"
+	auctiontypes "github.com/skip-mev/block-sdk/x/auction/types"
 
-	contractmanagertypes "github.com/neutron-org/neutron/v2/x/contractmanager/types"
-	crontypes "github.com/neutron-org/neutron/v2/x/cron/types"
-	dextypes "github.com/neutron-org/neutron/v2/x/dex/types"
-	feeburnertypes "github.com/neutron-org/neutron/v2/x/feeburner/types"
-	feerefundertypes "github.com/neutron-org/neutron/v2/x/feerefunder/types"
-	interchainqueriestypes "github.com/neutron-org/neutron/v2/x/interchainqueries/types"
-	interchaintxstypes "github.com/neutron-org/neutron/v2/x/interchaintxs/types"
-	tokenfactorytypes "github.com/neutron-org/neutron/v2/x/tokenfactory/types"
+	contractmanagertypes "github.com/neutron-org/neutron/v3/x/contractmanager/types"
+	crontypes "github.com/neutron-org/neutron/v3/x/cron/types"
+	dextypes "github.com/neutron-org/neutron/v3/x/dex/types"
+	feeburnertypes "github.com/neutron-org/neutron/v3/x/feeburner/types"
+	feerefundertypes "github.com/neutron-org/neutron/v3/x/feerefunder/types"
+	interchainqueriestypes "github.com/neutron-org/neutron/v3/x/interchainqueries/types"
+	interchaintxstypes "github.com/neutron-org/neutron/v3/x/interchaintxs/types"
+	tokenfactorytypes "github.com/neutron-org/neutron/v3/x/tokenfactory/types"
 )
 
 func IsConsumerProposalAllowlisted(content govtypes.Content) bool {
@@ -73,6 +75,7 @@ func isSdkMessageWhitelisted(msg sdk.Msg) bool {
 		*crisistypes.MsgUpdateParams,
 		*minttypes.MsgUpdateParams,
 		*pfmtypes.MsgUpdateParams,
+		*auctiontypes.MsgUpdateParams,
 		*authtypes.MsgUpdateParams:
 		return true
 	}
@@ -95,15 +98,16 @@ var WhitelistedParams = map[paramChangeKey]struct{}{
 	{Subspace: globalfeetypes.ModuleName, Key: string(globalfeetypes.ParamStoreKeyBypassMinFeeMsgTypes)}:            {},
 	{Subspace: globalfeetypes.ModuleName, Key: string(globalfeetypes.ParamStoreKeyMaxTotalBypassMinFeeMsgGasUsage)}: {},
 	// ICS consumer
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyRewardDenoms)}:                      {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyEnabled)}:                           {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyBlocksPerDistributionTransmission)}: {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyDistributionTransmissionChannel)}:   {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyProviderFeePoolAddrStr)}:            {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyTransferTimeoutPeriod)}:             {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyConsumerRedistributionFrac)}:        {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyHistoricalEntries)}:                 {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyConsumerUnbondingPeriod)}:           {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeySoftOptOutThreshold)}:               {},
-	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccvconsumertypes.KeyProviderRewardDenoms)}:              {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyRewardDenoms)}:                      {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyEnabled)}:                           {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyBlocksPerDistributionTransmission)}: {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyDistributionTransmissionChannel)}:   {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyProviderFeePoolAddrStr)}:            {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyTransferTimeoutPeriod)}:             {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyConsumerRedistributionFrac)}:        {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyHistoricalEntries)}:                 {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyConsumerUnbondingPeriod)}:           {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeySoftOptOutThreshold)}:               {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyProviderRewardDenoms)}:              {},
+	{Subspace: ccvconsumertypes.ModuleName, Key: string(ccv.KeyRetryDelayPeriod)}:                  {},
 }

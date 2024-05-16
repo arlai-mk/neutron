@@ -10,7 +10,7 @@ STAKEDENOM=${STAKEDENOM:-stake}
 
 echo "Creating and collecting gentx..."
 if [ "$NODE" == "node2" ]; then
-    $BINARY gentx val2 "2650000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
+    $BINARY genesis gentx val2 "2650000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
       --moniker="Crosnest" \
       --website="https://www.cros-nest.com/" \
       --identity="5F1D6AC7EA588676" \
@@ -20,7 +20,7 @@ if [ "$NODE" == "node2" ]; then
       --node="tcp://localhost:36656" \
       --keyring-backend test
 elif [ "$NODE" == "node3" ]; then
-    $BINARY gentx val3 "2350000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
+    $BINARY genesis gentx val3 "2350000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
       --moniker="HighStakes.ch | Stake for Airdrop" \
       --website="https://highstakes.ch/earn-ibex" \
       --identity="2CB281A714F6133B" \
@@ -30,7 +30,7 @@ elif [ "$NODE" == "node3" ]; then
       --node="tcp://localhost:46656" \
       --keyring-backend test
 elif [ "$NODE" == "node4" ]; then
-    $BINARY gentx val4 "2000000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
+    $BINARY genesis gentx val4 "2000000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
       --moniker="StakeLab" \
       --website="https://www.stakelab.zone" \
       --identity="F12B081334CBE0C6" \
@@ -40,7 +40,7 @@ elif [ "$NODE" == "node4" ]; then
       --node="tcp://localhost:56656" \
       --keyring-backend test
 elif [ "$NODE" == "node1" ]; then
-    $BINARY gentx val1 "3000000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
+    $BINARY genesis gentx val1 "3000000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
       --moniker="Moonkitt" \
       --website="https://moonkitt.com" \
       --identity="022AF2C303C88B9C" \
@@ -54,9 +54,9 @@ elif [ "$NODE" == "node1" ]; then
     mv "$BASE_DIR/$CHAINID/node3/config/gentx"/* "$CHAIN_DIR/config/gentx/"
     mv "$BASE_DIR/$CHAINID/node4/config/gentx"/* "$CHAIN_DIR/config/gentx/"
 
-    $BINARY collect-gentxs --home "$CHAIN_DIR"
+    $BINARY genesis collect-gentxs --home "$CHAIN_DIR"
 
-    sed -i -e 's/\"allow_messages\":.*/\"allow_messages\": [\"\/cosmos.bank.v1beta1.MsgSend\", \"\/cosmos.staking.v1beta1.MsgDelegate\", \"\/cosmos.staking.v1beta1.MsgUndelegate\"]/g' "$CHAIN_DIR/config/genesis.json"
+    sed -i -e 's/\*/\/cosmos.bank.v1beta1.MsgSend\", \"\/cosmos.staking.v1beta1.MsgDelegate\", \"\/cosmos.staking.v1beta1.MsgUndelegate/g' "$CHAIN_DIR/config/genesis.json"
     sed -i -e 's/\"validator_bond_factor\":.*/\"validator_bond_factor\": \"250.000000000000000000\",/g' "$CHAIN_DIR/config/genesis.json"
     sed -i -e 's/\"global_liquid_staking_cap\":.*/\"global_liquid_staking_cap\": \"0.250000000000000000\",/g' "$CHAIN_DIR/config/genesis.json"
 
