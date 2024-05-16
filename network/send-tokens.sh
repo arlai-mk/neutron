@@ -5,6 +5,7 @@ declare -a cosmos_addresses=(
     "cosmos1wgvxd0y363f04ugp7r4pru74s79ajnfe37tprf" # Victor
     "cosmos16wa6c8cgvrq9ey3c0mm59eqvnlwyu4w3wz42ne" # arlai Alice
     "cosmos1uwadr4j8etlj3gdmf74v5u2rae2xr68fte3r5c" # arlai Bob
+    "cosmos1reuzmm9q9fr69n5xdy920fsf2kgspvh5mahld3" # arlai Charlie
     "cosmos1903lkw4kxwefee4gax8dmnd2gtez3ljgsr346e" # arlai Alice Ledger
     "cosmos1amfsez6sqk35rpq5589mrqeqdhg04jsx0u9yy7" # arlai Bob Ledger
     "cosmos1hyyftdvt732u5y7z0muvqm0ajxg5k6ws5n3s7l" # arlai Charlie Ledger
@@ -65,6 +66,7 @@ declare -a neutron_addresses=(
     "neutron1wgvxd0y363f04ugp7r4pru74s79ajnfe4pzrew" # Victor
     "neutron16wa6c8cgvrq9ey3c0mm59eqvnlwyu4w32augf7" # arlai Alice
     "neutron1uwadr4j8etlj3gdmf74v5u2rae2xr68f0xcpwl" # arlai Bob
+    "neutron1reuzmm9q9fr69n5xdy920fsf2kgspvh5lz7ahk" # arlai Charlie
     "neutron1903lkw4kxwefee4gax8dmnd2gtez3ljg5uchq7" # arlai Alice Ledger
     "neutron1amfsez6sqk35rpq5589mrqeqdhg04jsxtrvx7e" # arlai Bob Ledger
     "neutron1hyyftdvt732u5y7z0muvqm0ajxg5k6wssvcjyc" # arlai Charlie Ledger

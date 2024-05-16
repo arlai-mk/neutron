@@ -12,6 +12,7 @@ echo "Creating and collecting gentx..."
 if [ "$NODE" == "node2" ]; then
     $BINARY genesis gentx val2 "2650000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
       --moniker="Crosnest" \
+      --commission-rate="0.050000000000000000" \
       --website="https://www.cros-nest.com/" \
       --identity="5F1D6AC7EA588676" \
       --details="" \
@@ -22,6 +23,7 @@ if [ "$NODE" == "node2" ]; then
 elif [ "$NODE" == "node3" ]; then
     $BINARY genesis gentx val3 "2350000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
       --moniker="HighStakes.ch | Stake for Airdrop" \
+      --commission-rate="0.050000000000000000" \
       --website="https://highstakes.ch/earn-ibex" \
       --identity="2CB281A714F6133B" \
       --details="Increase your staking rewards and earn extra $ATOM with our IBEX program." \
@@ -31,17 +33,19 @@ elif [ "$NODE" == "node3" ]; then
       --keyring-backend test
 elif [ "$NODE" == "node4" ]; then
     $BINARY genesis gentx val4 "2000000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
-      --moniker="StakeLab" \
-      --website="https://www.stakelab.zone" \
-      --identity="F12B081334CBE0C6" \
-      --details="Grow your assets - Staking & Relaying Hub for Cosmos ecosystem" \
-      --security-contact="securite@stakelab.fr" \
+      --moniker="POSTHUMAN 🧬 StakeDrop" \
+      --commission-rate="0.050000000000000000" \
+      --website="https://posthuman.digital" \
+      --identity="8A9FC930E1A980D6" \
+      --details="PHMN StakeDrop for delegators 🧬 100% slashing protection ⚛️ https://posthuman.digital" \
+      --security-contact="validator@posthuman.digital" \
       --ip="0.0.0.0" \
       --node="tcp://localhost:56656" \
       --keyring-backend test
 elif [ "$NODE" == "node1" ]; then
     $BINARY genesis gentx val1 "3000000000$STAKEDENOM" --home "$CHAIN_DIR" --chain-id "$CHAINID" \
       --moniker="Moonkitt" \
+      --commission-rate="0.050000000000000000" \
       --website="https://moonkitt.com" \
       --identity="022AF2C303C88B9C" \
       --details="Secure & experienced validator. Delegate to earn rewards with peace of mind." \
