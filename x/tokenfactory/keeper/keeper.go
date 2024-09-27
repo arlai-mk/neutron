@@ -1,23 +1,23 @@
 package keeper
 
 import (
+	"context"
 	"fmt"
+	"sort"
 
-	"github.com/cometbft/cometbft/libs/log"
+	"cosmossdk.io/log"
+	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-
-	"github.com/cosmos/cosmos-sdk/store/prefix"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v3/x/tokenfactory/types"
+	"github.com/neutron-org/neutron/v4/x/tokenfactory/types"
 )
 
 type (
 	Keeper struct {
 		storeKey       storetypes.StoreKey
-		permAddrs      map[string]authtypes.PermissionsForAddress
+		knownModules   []string
 		cdc            codec.Codec
 		accountKeeper  types.AccountKeeper
 		bankKeeper     types.BankKeeper
@@ -36,15 +36,16 @@ func NewKeeper(
 	contractKeeper types.ContractKeeper,
 	authority string,
 ) Keeper {
-	permAddrs := make(map[string]authtypes.PermissionsForAddress)
-	for name, perms := range maccPerms {
-		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
+	sortedKnownModules := make([]string, 0, len(maccPerms))
+	for moduleName := range maccPerms {
+		sortedKnownModules = append(sortedKnownModules, moduleName)
 	}
+	sort.Strings(sortedKnownModules)
 
 	return Keeper{
 		cdc:            cdc,
 		storeKey:       storeKey,
-		permAddrs:      permAddrs,
+		knownModules:   sortedKnownModules,
 		accountKeeper:  accountKeeper,
 		bankKeeper:     bankKeeper,
 		contractKeeper: contractKeeper,
@@ -63,19 +64,21 @@ func (k Keeper) GetAuthority() string {
 }
 
 // GetDenomPrefixStore returns the substore for a specific denom
-func (k Keeper) GetDenomPrefixStore(ctx sdk.Context, denom string) sdk.KVStore {
-	store := ctx.KVStore(k.storeKey)
+func (k Keeper) GetDenomPrefixStore(ctx context.Context, denom string) storetypes.KVStore {
+	c := sdk.UnwrapSDKContext(ctx)
+
+	store := c.KVStore(k.storeKey)
 	return prefix.NewStore(store, types.GetDenomPrefixStore(denom))
 }
 
 // GetCreatorPrefixStore returns the substore for a specific creator address
-func (k Keeper) GetCreatorPrefixStore(ctx sdk.Context, creator string) sdk.KVStore {
+func (k Keeper) GetCreatorPrefixStore(ctx sdk.Context, creator string) storetypes.KVStore {
 	store := ctx.KVStore(k.storeKey)
 	return prefix.NewStore(store, types.GetCreatorPrefix(creator))
 }
 
 // GetCreatorsPrefixStore returns the substore that contains a list of creators
-func (k Keeper) GetCreatorsPrefixStore(ctx sdk.Context) sdk.KVStore {
+func (k Keeper) GetCreatorsPrefixStore(ctx sdk.Context) storetypes.KVStore {
 	store := ctx.KVStore(k.storeKey)
 	return prefix.NewStore(store, types.GetCreatorsPrefix())
 }

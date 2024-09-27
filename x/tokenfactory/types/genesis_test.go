@@ -3,14 +3,15 @@ package types_test
 import (
 	"testing"
 
+	"github.com/neutron-org/neutron/v4/app/config"
+
 	"github.com/stretchr/testify/require"
 
-	"github.com/neutron-org/neutron/v3/app"
-	"github.com/neutron-org/neutron/v3/x/tokenfactory/types"
+	"github.com/neutron-org/neutron/v4/x/tokenfactory/types"
 )
 
 func TestGenesisState_Validate(t *testing.T) {
-	app.GetDefaultConfig()
+	config.GetDefaultConfig()
 
 	for _, tc := range []struct {
 		desc     string
@@ -124,6 +125,36 @@ func TestGenesisState_Validate(t *testing.T) {
 						AuthorityMetadata: types.DenomAuthorityMetadata{
 							Admin: "",
 						},
+					},
+				},
+			},
+			valid: false,
+		},
+		{
+			desc: "empty hook address",
+			genState: &types.GenesisState{
+				FactoryDenoms: []types.GenesisDenom{
+					{
+						Denom: "factory/neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2/bitcoin",
+						AuthorityMetadata: types.DenomAuthorityMetadata{
+							Admin: "neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2",
+						},
+						HookContractAddress: "",
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			desc: "invalid hook address",
+			genState: &types.GenesisState{
+				FactoryDenoms: []types.GenesisDenom{
+					{
+						Denom: "factory/neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2/bitcoin",
+						AuthorityMetadata: types.DenomAuthorityMetadata{
+							Admin: "neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2",
+						},
+						HookContractAddress: "sfsdfsdfsdfs",
 					},
 				},
 			},

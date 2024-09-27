@@ -5,19 +5,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/armon/go-metrics"
+	"cosmossdk.io/log"
+	"github.com/hashicorp/go-metrics"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
+	"cosmossdk.io/store/prefix"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
 
-	"github.com/cometbft/cometbft/libs/log"
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v3/x/cron/types"
+	"github.com/neutron-org/neutron/v4/x/cron/types"
 )
 
 var (
@@ -66,10 +66,9 @@ func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
 
 // ExecuteReadySchedules gets all schedules that are due for execution (with limit that is equal to Params.Limit)
 // and executes messages in each one
-// NOTE that errors in contract calls rollback all already executed messages
-func (k *Keeper) ExecuteReadySchedules(ctx sdk.Context) {
+func (k *Keeper) ExecuteReadySchedules(ctx sdk.Context, executionStage types.ExecutionStage) {
 	telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), LabelExecuteReadySchedules)
-	schedules := k.getSchedulesReadyForExecution(ctx)
+	schedules := k.getSchedulesReadyForExecution(ctx, executionStage)
 
 	for _, schedule := range schedules {
 		err := k.executeSchedule(ctx, schedule)
@@ -77,9 +76,15 @@ func (k *Keeper) ExecuteReadySchedules(ctx sdk.Context) {
 	}
 }
 
-// AddSchedule adds new schedule to execution for every block `period`.
+// AddSchedule adds a new schedule to be executed every certain number of blocks, specified in the `period`.
 // First schedule execution is supposed to be on `now + period` block.
-func (k *Keeper) AddSchedule(ctx sdk.Context, name string, period uint64, msgs []types.MsgExecuteContract) error {
+func (k *Keeper) AddSchedule(
+	ctx sdk.Context,
+	name string,
+	period uint64,
+	msgs []types.MsgExecuteContract,
+	executionStage types.ExecutionStage,
+) error {
 	if k.scheduleExists(ctx, name) {
 		return fmt.Errorf("schedule already exists with name=%v", name)
 	}
@@ -89,7 +94,9 @@ func (k *Keeper) AddSchedule(ctx sdk.Context, name string, period uint64, msgs [
 		Period:            period,
 		Msgs:              msgs,
 		LastExecuteHeight: uint64(ctx.BlockHeight()), // let's execute newly added schedule on `now + period` block
+		ExecutionStage:    executionStage,
 	}
+
 	k.storeSchedule(ctx, schedule)
 	k.changeTotalCount(ctx, 1)
 
@@ -125,7 +132,7 @@ func (k *Keeper) GetAllSchedules(ctx sdk.Context) []types.Schedule {
 
 	res := make([]types.Schedule, 0)
 
-	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {
@@ -141,21 +148,21 @@ func (k *Keeper) GetScheduleCount(ctx sdk.Context) int32 {
 	return k.getScheduleCount(ctx)
 }
 
-func (k *Keeper) getSchedulesReadyForExecution(ctx sdk.Context) []types.Schedule {
+func (k *Keeper) getSchedulesReadyForExecution(ctx sdk.Context, executionStage types.ExecutionStage) []types.Schedule {
 	params := k.GetParams(ctx)
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.ScheduleKey)
 	count := uint64(0)
 
 	res := make([]types.Schedule, 0)
 
-	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {
 		var schedule types.Schedule
 		k.cdc.MustUnmarshal(iterator.Value(), &schedule)
 
-		if k.intervalPassed(ctx, schedule) {
+		if k.intervalPassed(ctx, schedule) && schedule.ExecutionStage == executionStage {
 			res = append(res, schedule)
 			count++
 
@@ -186,7 +193,7 @@ func (k *Keeper) executeSchedule(ctx sdk.Context, schedule types.Schedule) error
 			Msg:      []byte(msg.Msg),
 			Funds:    sdk.NewCoins(),
 		}
-		_, err := k.WasmMsgServer.ExecuteContract(sdk.WrapSDKContext(cacheCtx), &executeMsg)
+		_, err := k.WasmMsgServer.ExecuteContract(cacheCtx, &executeMsg)
 		if err != nil {
 			ctx.Logger().Info("executeSchedule: failed to execute contract msg",
 				"schedule_name", schedule.Name,

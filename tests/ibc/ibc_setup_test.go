@@ -5,27 +5,24 @@ import (
 
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward"
-	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" //nolint:staticcheck
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 
-	ibctesting "github.com/cosmos/ibc-go/v7/testing"
+	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 
-	icstestingutils "github.com/cosmos/interchain-security/v4/testutil/ibc_testing"
-	icstestutil "github.com/cosmos/interchain-security/v4/testutil/integration"
-	ccvconsumertypes "github.com/cosmos/interchain-security/v4/x/ccv/consumer/types"
-	ccv "github.com/cosmos/interchain-security/v4/x/ccv/types"
+	icstestingutils "github.com/cosmos/interchain-security/v5/testutil/ibc_testing"
+	icstestutil "github.com/cosmos/interchain-security/v5/testutil/integration"
+	ccvconsumertypes "github.com/cosmos/interchain-security/v5/x/ccv/consumer/types"
+	ccv "github.com/cosmos/interchain-security/v5/x/ccv/types"
 	"github.com/stretchr/testify/suite"
 
-	appparams "github.com/neutron-org/neutron/v3/app/params"
-	"github.com/neutron-org/neutron/v3/testutil"
-	dextypes "github.com/neutron-org/neutron/v3/x/dex/types"
+	appparams "github.com/neutron-org/neutron/v4/app/params"
+	"github.com/neutron-org/neutron/v4/testutil"
 )
 
 var (
 	nativeDenom            = appparams.DefaultDenom
-	ibcTransferAmount      = math.NewInt(100_000)
 	genesisWalletAmount, _ = math.NewIntFromString("10000000000000000000")
 )
 
@@ -337,39 +334,4 @@ func (s *IBCTestSuite) assertChainBBalance(addr sdk.AccAddress, denom string, ex
 //nolint:unused
 func (s *IBCTestSuite) assertChainCBalance(addr sdk.AccAddress, denom string, expectedAmt math.Int) {
 	s.assertBalance(s.bundleC.App.GetTestBankKeeper(), s.bundleC.Chain, addr, denom, expectedAmt)
-}
-
-func (s *IBCTestSuite) ReceiverOverrideAddr(channel, sender string) sdk.AccAddress {
-	addr, err := packetforward.GetReceiver(channel, sender)
-	if err != nil {
-		panic("Cannot calc receiver override: " + err.Error())
-	}
-	return sdk.MustAccAddressFromBech32(addr)
-}
-
-func (s *IBCTestSuite) neutronDeposit(
-	token0 string,
-	token1 string,
-	depositAmount0 math.Int,
-	depositAmount1 math.Int,
-	tickIndex int64,
-	fee uint64,
-	creator sdk.AccAddress,
-) {
-	// create deposit msg
-	msgDeposit := dextypes.NewMsgDeposit(
-		creator.String(),
-		creator.String(),
-		token0,
-		token1,
-		[]math.Int{depositAmount0},
-		[]math.Int{depositAmount1},
-		[]int64{tickIndex},
-		[]uint64{fee},
-		[]*dextypes.DepositOptions{{DisableAutoswap: false}},
-	)
-
-	// execute deposit msg
-	_, err := s.neutronChain.SendMsgs(msgDeposit)
-	s.Assert().NoError(err, "Deposit Failed")
 }

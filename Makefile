@@ -7,7 +7,7 @@ LEDGER_ENABLED ?= true
 SDK_PACK := $(shell go list -m github.com/cosmos/cosmos-sdk | sed  's/ /\@/g')
 BINDIR ?= $(GOPATH)/bin
 SIMAPP = ./app
-GO_VERSION=1.21
+GO_VERSION=1.22
 GOLANGCI_LINT_VERSION=v1.55.2
 BUILDDIR ?= $(CURDIR)/build
 
@@ -111,7 +111,7 @@ build-static-linux-amd64: go.sum $(BUILDDIR)/
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg GIT_VERSION=$(VERSION) \
 		--build-arg GIT_COMMIT=$(COMMIT) \
-		--build-arg BUILD_TAGS=$(build_tags_comma_sep) \
+		--build-arg BUILD_TAGS=$(build_tags_comma_sep),muslc \
 		--platform linux/amd64 \
 		-t neutron-amd64 \
 		--load \
@@ -120,6 +120,28 @@ build-static-linux-amd64: go.sum $(BUILDDIR)/
 	$(DOCKER) create -ti --name neutronbinary neutron-amd64
 	$(DOCKER) cp neutronbinary:/bin/neutrond $(BUILDDIR)/neutrond-linux-amd64
 	$(DOCKER) rm -f neutronbinary
+
+build-e2e-docker-image: go.sum $(BUILDDIR)/
+	$(DOCKER) buildx create --name neutronbuilder || true
+	$(DOCKER) buildx use neutronbuilder
+	$(DOCKER) buildx build \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		--build-arg GIT_VERSION=$(VERSION) \
+		--build-arg GIT_COMMIT=$(COMMIT) \
+		--build-arg BUILD_TAGS=$(build_tags_comma_sep),skip_ccv_msg_filter,muslc \
+		--build-arg RUNNER_IMAGE="alpine:3.18" \
+		--platform linux/amd64 \
+		-t neutron-node \
+		--load \
+		-f Dockerfile.builder .
+
+slinky-e2e-test:
+	@echo "Running e2e slinky tests..."
+	cd ./tests/slinky && go mod tidy && go test -v -race -timeout 30m -count=1 ./...
+
+feemarket-e2e-test:
+	@echo "Running e2e feemarket tests..."
+	@cd ./tests/feemarket &&  go mod tidy && go test -p 1 -v -race -timeout 30m -count=1 ./...
 
 install-test-binary: check_version go.sum
 	go install -mod=readonly $(BUILD_FLAGS_TEST_BINARY) ./cmd/neutrond
@@ -151,6 +173,8 @@ distclean: clean
 
 
 test: test-unit
+	@rm -rf ./.testchains
+
 test-all: check test-race test-cover
 
 test-unit:
@@ -178,15 +202,14 @@ test-sim-multi-seed-short: runsim
 ###############################################################################
 
 lint:
-	golangci-lint run
-	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "*_test.go" | xargs gofmt -d -s
+	golangci-lint run --skip-files ".*.pb.go"
+	find . -name '*.go' -not -name "*.pb.go" -type f -not -path "./vendor*" -not -path "*.git*" -not -path "*_test.go" | xargs gofmt -d -s
 
 format:
 	@go install mvdan.cc/gofumpt@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "./client/docs/statik/statik.go" -not -path "./tests/mocks/*" -not -name "*.pb.go" -not -name "*.pb.gw.go" -not -name "*.pulsar.go" -not -path "./crypto/keys/secp256k1/*" | xargs gofumpt -w -l
-	golangci-lint run --fix
-	goimports -w -local github.com/neutron-org .
+	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "./client/docs/statik/statik.go" -not -path "./tests/mocks/*" -not -name "*.pb.go" -not -name "*.pb.gw.go" -not -name "*.pulsar.go" -not -path "./crypto/keys/secp256k1/*" | xargs -I % sh -c 'gofumpt -w -l % && goimports -w -local github.com/neutron-org %'
+	golangci-lint run --fix --skip-files ".*.pb.go"
 
 .PHONY: format
 

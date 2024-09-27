@@ -2,9 +2,10 @@ version: v1
 name: buf.build/neutron-org/neutron
 deps:
   - buf.build/cosmos/cosmos-proto
-  - buf.build/cosmos/cosmos-sdk:v0.47.0
+  - buf.build/cosmos/cosmos-sdk:v0.50.0
   - buf.build/cosmos/gogo-proto
   - buf.build/googleapis/googleapis
+  - buf.build/cosmos/ibc
 #  - buf.build/osmosis-labs/osmosis
 breaking:
   use:

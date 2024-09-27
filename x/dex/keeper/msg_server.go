@@ -3,11 +3,12 @@ package keeper
 import (
 	"context"
 
+	"cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/neutron-org/neutron/v3/x/dex/types"
+	"github.com/neutron-org/neutron/v4/x/dex/types"
 )
 
 type MsgServer struct {
@@ -26,10 +27,18 @@ func (k MsgServer) Deposit(
 	goCtx context.Context,
 	msg *types.MsgDeposit,
 ) (*types.MsgDepositResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgDeposit")
+	}
+
+	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
 	callerAddr := sdk.MustAccAddressFromBech32(msg.Creator)
 	receiverAddr := sdk.MustAccAddressFromBech32(msg.Receiver)
 
-	pairID, err := types.NewPairIDFromUnsorted(msg.TokenA, msg.TokenB)
+	pairID, err := types.NewPairID(msg.TokenA, msg.TokenB)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +48,7 @@ func (k MsgServer) Deposit(
 
 	tickIndexes := NormalizeAllTickIndexes(msg.TokenA, pairID.Token0, msg.TickIndexesAToB)
 
-	Amounts0Deposit, Amounts1Deposit, _, err := k.DepositCore(
+	Amounts0Deposit, Amounts1Deposit, sharesIssued, failedDeposits, err := k.DepositCore(
 		goCtx,
 		pairID,
 		callerAddr,
@@ -57,6 +66,8 @@ func (k MsgServer) Deposit(
 	return &types.MsgDepositResponse{
 		Reserve0Deposited: Amounts0Deposit,
 		Reserve1Deposited: Amounts1Deposit,
+		FailedDeposits:    failedDeposits,
+		SharesIssued:      sharesIssued,
 	}, nil
 }
 
@@ -64,17 +75,25 @@ func (k MsgServer) Withdrawal(
 	goCtx context.Context,
 	msg *types.MsgWithdrawal,
 ) (*types.MsgWithdrawalResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgWithdrawal")
+	}
+
+	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
 	callerAddr := sdk.MustAccAddressFromBech32(msg.Creator)
 	receiverAddr := sdk.MustAccAddressFromBech32(msg.Receiver)
 
-	pairID, err := types.NewPairIDFromUnsorted(msg.TokenA, msg.TokenB)
+	pairID, err := types.NewPairID(msg.TokenA, msg.TokenB)
 	if err != nil {
 		return nil, err
 	}
 
 	tickIndexes := NormalizeAllTickIndexes(msg.TokenA, pairID.Token0, msg.TickIndexesAToB)
 
-	err = k.WithdrawCore(
+	reserve0ToRemoved, reserve1ToRemoved, sharesBurned, err := k.WithdrawCore(
 		goCtx,
 		pairID,
 		callerAddr,
@@ -87,13 +106,25 @@ func (k MsgServer) Withdrawal(
 		return nil, err
 	}
 
-	return &types.MsgWithdrawalResponse{}, nil
+	return &types.MsgWithdrawalResponse{
+		Reserve0Withdrawn: reserve0ToRemoved,
+		Reserve1Withdrawn: reserve1ToRemoved,
+		SharesBurned:      sharesBurned,
+	}, nil
 }
 
 func (k MsgServer) PlaceLimitOrder(
 	goCtx context.Context,
 	msg *types.MsgPlaceLimitOrder,
 ) (*types.MsgPlaceLimitOrderResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgPlaceLimitOrder")
+	}
+
+	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	callerAddr := sdk.MustAccAddressFromBech32(msg.Creator)
@@ -103,12 +134,19 @@ func (k MsgServer) PlaceLimitOrder(
 	if err != nil {
 		return &types.MsgPlaceLimitOrderResponse{}, err
 	}
-	trancheKey, coinIn, _, coinOutSwap, err := k.PlaceLimitOrderCore(
+	tickIndex := msg.TickIndexInToOut
+	if msg.LimitSellPrice != nil {
+		tickIndex, err = types.CalcTickIndexFromPrice(*msg.LimitSellPrice)
+		if err != nil {
+			return &types.MsgPlaceLimitOrderResponse{}, errors.Wrapf(err, "invalid LimitSellPrice %s", msg.LimitSellPrice.String())
+		}
+	}
+	trancheKey, coinIn, swapInCoin, coinOutSwap, err := k.PlaceLimitOrderCore(
 		goCtx,
 		msg.TokenIn,
 		msg.TokenOut,
 		msg.AmountIn,
-		msg.TickIndexInToOut,
+		tickIndex,
 		msg.OrderType,
 		msg.ExpirationTime,
 		msg.MaxAmountOut,
@@ -123,6 +161,7 @@ func (k MsgServer) PlaceLimitOrder(
 		TrancheKey:   trancheKey,
 		CoinIn:       coinIn,
 		TakerCoinOut: coinOutSwap,
+		TakerCoinIn:  swapInCoin,
 	}, nil
 }
 
@@ -130,9 +169,17 @@ func (k MsgServer) WithdrawFilledLimitOrder(
 	goCtx context.Context,
 	msg *types.MsgWithdrawFilledLimitOrder,
 ) (*types.MsgWithdrawFilledLimitOrderResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgWithdrawFilledLimitOrder")
+	}
+
+	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
 	callerAddr := sdk.MustAccAddressFromBech32(msg.Creator)
 
-	err := k.WithdrawFilledLimitOrderCore(
+	takerCoinOut, makerCoinOut, err := k.WithdrawFilledLimitOrderCore(
 		goCtx,
 		msg.TrancheKey,
 		callerAddr,
@@ -141,16 +188,27 @@ func (k MsgServer) WithdrawFilledLimitOrder(
 		return &types.MsgWithdrawFilledLimitOrderResponse{}, err
 	}
 
-	return &types.MsgWithdrawFilledLimitOrderResponse{}, nil
+	return &types.MsgWithdrawFilledLimitOrderResponse{
+		TakerCoinOut: takerCoinOut,
+		MakerCoinOut: makerCoinOut,
+	}, nil
 }
 
 func (k MsgServer) CancelLimitOrder(
 	goCtx context.Context,
 	msg *types.MsgCancelLimitOrder,
 ) (*types.MsgCancelLimitOrderResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgCancelLimitOrder")
+	}
+
+	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
 	callerAddr := sdk.MustAccAddressFromBech32(msg.Creator)
 
-	err := k.CancelLimitOrderCore(
+	makerCoinOut, takerCoinOut, err := k.CancelLimitOrderCore(
 		goCtx,
 		msg.TrancheKey,
 		callerAddr,
@@ -159,17 +217,28 @@ func (k MsgServer) CancelLimitOrder(
 		return &types.MsgCancelLimitOrderResponse{}, err
 	}
 
-	return &types.MsgCancelLimitOrderResponse{}, nil
+	return &types.MsgCancelLimitOrderResponse{
+		TakerCoinOut: takerCoinOut,
+		MakerCoinOut: makerCoinOut,
+	}, nil
 }
 
 func (k MsgServer) MultiHopSwap(
 	goCtx context.Context,
 	msg *types.MsgMultiHopSwap,
 ) (*types.MsgMultiHopSwapResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgMultiHopSwap")
+	}
+
+	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
 	callerAddr := sdk.MustAccAddressFromBech32(msg.Creator)
 	receiverAddr := sdk.MustAccAddressFromBech32(msg.Receiver)
 
-	coinOut, err := k.MultiHopSwapCore(
+	coinOut, route, dust, err := k.MultiHopSwapCore(
 		goCtx,
 		msg.AmountIn,
 		msg.Routes,
@@ -181,14 +250,18 @@ func (k MsgServer) MultiHopSwap(
 	if err != nil {
 		return &types.MsgMultiHopSwapResponse{}, err
 	}
-
-	return &types.MsgMultiHopSwapResponse{CoinOut: coinOut}, nil
+	return &types.MsgMultiHopSwapResponse{
+		CoinOut: coinOut,
+		Route:   &types.MultiHopRoute{Hops: route},
+		Dust:    dust,
+	}, nil
 }
 
 func (k MsgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
-	if err := req.ValidateBasic(); err != nil {
-		return nil, err
+	if err := req.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgUpdateParams")
 	}
+
 	authority := k.GetAuthority()
 	if authority != req.Authority {
 		return nil, status.Errorf(codes.PermissionDenied, "invalid authority; expected %s, got %s", authority, req.Authority)
@@ -200,4 +273,14 @@ func (k MsgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParam
 	}
 
 	return &types.MsgUpdateParamsResponse{}, nil
+}
+
+func (k MsgServer) AssertNotPaused(goCtx context.Context) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	paused := k.GetParams(ctx).Paused
+
+	if paused {
+		return types.ErrDexPaused
+	}
+	return nil
 }

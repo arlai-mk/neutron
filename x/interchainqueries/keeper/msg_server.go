@@ -8,18 +8,20 @@ import (
 	"time"
 
 	"cosmossdk.io/errors"
-	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
+	tendermint "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	ibcclienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	ibcconnectiontypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
-	ibccommitmenttypes "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" //nolint:staticcheck
+	ibcconnectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	ibccommitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
 	ics23 "github.com/cosmos/ics23/go"
 
-	"github.com/neutron-org/neutron/v3/x/interchainqueries/types"
+	"github.com/neutron-org/neutron/v4/x/interchainqueries/types"
 )
+
+var _ types.MsgServer = msgServer{}
 
 type msgServer struct {
 	Keeper
@@ -33,9 +35,13 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 
 func (m msgServer) RegisterInterchainQuery(goCtx context.Context, msg *types.MsgRegisterInterchainQuery) (*types.MsgRegisterInterchainQueryResponse, error) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), LabelRegisterInterchainQuery)
-
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	ctx.Logger().Debug("RegisterInterchainQuery", "msg", msg)
+	params := m.GetParams(ctx)
+
+	if err := msg.Validate(params); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgRegisterInterchainQuery")
+	}
 
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
@@ -55,8 +61,6 @@ func (m msgServer) RegisterInterchainQuery(goCtx context.Context, msg *types.Msg
 
 	lastID := m.GetLastRegisteredQueryKey(ctx)
 	lastID++
-
-	params := m.GetParams(ctx)
 
 	registeredQuery := &types.RegisteredQuery{
 		Id:                 lastID,
@@ -89,6 +93,10 @@ func (m msgServer) RegisterInterchainQuery(goCtx context.Context, msg *types.Msg
 }
 
 func (m msgServer) RemoveInterchainQuery(goCtx context.Context, msg *types.MsgRemoveInterchainQueryRequest) (*types.MsgRemoveInterchainQueryResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgRemoveInterchainQueryRequest")
+	}
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	ctx.Logger().Debug("RemoveInterchainQuery", "msg", msg)
 
@@ -114,6 +122,11 @@ func (m msgServer) RemoveInterchainQuery(goCtx context.Context, msg *types.MsgRe
 func (m msgServer) UpdateInterchainQuery(goCtx context.Context, msg *types.MsgUpdateInterchainQueryRequest) (*types.MsgUpdateInterchainQueryResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	ctx.Logger().Debug("UpdateInterchainQuery", "msg", msg)
+	params := m.GetParams(ctx)
+
+	if err := msg.Validate(params); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgUpdateInterchainQueryRequest")
+	}
 
 	query, err := m.GetQueryByID(ctx, msg.GetQueryId())
 	if err != nil {
@@ -156,6 +169,10 @@ func (m msgServer) UpdateInterchainQuery(goCtx context.Context, msg *types.MsgUp
 func (m msgServer) SubmitQueryResult(goCtx context.Context, msg *types.MsgSubmitQueryResult) (*types.MsgSubmitQueryResultResponse, error) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), LabelRegisterInterchainQuery)
 
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgSubmitQueryResult")
+	}
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	ctx.Logger().Debug("SubmitQueryResult", "query_id", msg.QueryId)
 
@@ -164,6 +181,11 @@ func (m msgServer) SubmitQueryResult(goCtx context.Context, msg *types.MsgSubmit
 		ctx.Logger().Debug("SubmitQueryResult: failed to GetQueryByID",
 			"error", err, "query_id", msg.QueryId)
 		return nil, errors.Wrapf(err, "failed to get query by id: %v", err)
+	}
+
+	connection, ok := m.ibcKeeper.ConnectionKeeper.GetConnection(ctx, query.ConnectionId)
+	if !ok {
+		return nil, errors.Wrapf(types.ErrInvalidConnectionID, "registered query %d has invalid connection id: %s", query.Id, query.ConnectionId)
 	}
 
 	queryOwner, err := sdk.AccAddressFromBech32(query.Owner)
@@ -208,7 +230,7 @@ func (m msgServer) SubmitQueryResult(goCtx context.Context, msg *types.MsgSubmit
 			return nil, errors.Wrapf(sdkerrors.ErrUnpackAny, "failed to cast interface exported.ConsensusState to type *tendermint.ConsensusState")
 		}
 
-		clientState, err := m.GetClientState(ctx, msg.ClientId)
+		clientState, err := m.GetClientState(ctx, connection.ClientId)
 		if err != nil {
 			return nil, err
 		}
@@ -275,7 +297,7 @@ func (m msgServer) SubmitQueryResult(goCtx context.Context, msg *types.MsgSubmit
 			return nil, errors.Wrapf(types.ErrInvalidType, "invalid query result for query type: %s", query.QueryType)
 		}
 
-		if err := m.ProcessBlock(ctx, queryOwner, msg.QueryId, msg.ClientId, msg.Result.Block); err != nil {
+		if err := m.ProcessBlock(ctx, queryOwner, msg.QueryId, connection.ClientId, msg.Result.Block); err != nil {
 			ctx.Logger().Debug("SubmitQueryResult: failed to ProcessBlock",
 				"error", err, "query", query, "message", msg)
 			return nil, errors.Wrapf(err, "failed to ProcessBlock: %v", err)
@@ -311,9 +333,10 @@ func (m msgServer) validateUpdateInterchainQueryParams(
 
 // UpdateParams updates the module parameters
 func (k Keeper) UpdateParams(goCtx context.Context, req *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
-	if err := req.ValidateBasic(); err != nil {
-		return nil, err
+	if err := req.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgUpdateParams")
 	}
+
 	authority := k.GetAuthority()
 	if authority != req.Authority {
 		return nil, errors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid authority; expected %s, got %s", authority, req.Authority)
@@ -358,5 +381,3 @@ func getEventsQueryRemoved(query *types.RegisteredQuery) sdk.Events {
 		),
 	}
 }
-
-var _ types.MsgServer = msgServer{}

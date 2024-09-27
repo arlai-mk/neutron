@@ -4,15 +4,14 @@ import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	appProvider "github.com/cosmos/interchain-security/v4/app/provider"
-	icssimapp "github.com/cosmos/interchain-security/v4/testutil/ibc_testing"
+	appProvider "github.com/cosmos/interchain-security/v5/app/provider"
+	e2e "github.com/cosmos/interchain-security/v5/tests/integration"
+	icssimapp "github.com/cosmos/interchain-security/v5/testutil/ibc_testing"
 	"github.com/stretchr/testify/suite"
 
-	e2e "github.com/cosmos/interchain-security/v4/tests/integration"
-
-	appConsumer "github.com/neutron-org/neutron/v3/app"
-	appparams "github.com/neutron-org/neutron/v3/app/params"
-	"github.com/neutron-org/neutron/v3/testutil"
+	appConsumer "github.com/neutron-org/neutron/v4/app"
+	appparams "github.com/neutron-org/neutron/v4/app/params"
+	"github.com/neutron-org/neutron/v4/testutil"
 )
 
 // Executes the standard group of ccv tests against a consumer and provider app.go implementation.
@@ -22,8 +21,9 @@ func TestCCVTestSuite(t *testing.T) {
 	ccvSuite := e2e.NewCCVTestSuite[*appProvider.App, *appConsumer.App](
 		// Pass in ibctesting.AppIniters for provider and consumer.
 		icssimapp.ProviderAppIniter, testutil.SetupValSetAppIniter,
-		// TODO: These three tests just don't work in IS, so skip them for now
-		[]string{"TestSendRewardsRetries", "TestRewardsDistribution", "TestEndBlockRD"})
+		// TODO: These test just doesn't work in IS, so skip it for now
+		[]string{"TestRewardsDistribution"},
+	)
 
 	// Run tests
 	suite.Run(t, ccvSuite)

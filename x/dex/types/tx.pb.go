@@ -5,12 +5,8 @@ package types
 
 import (
 	context "context"
+	cosmossdk_io_math "cosmossdk.io/math"
 	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-	time "time"
-
 	_ "github.com/cosmos/cosmos-proto"
 	_ "github.com/cosmos/cosmos-sdk/types"
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
@@ -20,12 +16,15 @@ import (
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
 	github_com_cosmos_gogoproto_types "github.com/cosmos/gogoproto/types"
+	github_com_neutron_org_neutron_v4_utils_math "github.com/neutron-org/neutron/v4/utils/math"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	_ "google.golang.org/protobuf/types/known/timestamppb"
-
-	github_com_neutron_org_neutron_v3_utils_math "github.com/neutron-org/neutron/v3/utils/math"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+	time "time"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -76,6 +75,7 @@ func (LimitOrderType) EnumDescriptor() ([]byte, []int) {
 
 type DepositOptions struct {
 	DisableAutoswap bool `protobuf:"varint,1,opt,name=disable_autoswap,json=disableAutoswap,proto3" json:"disable_autoswap,omitempty"`
+	FailTxOnBel     bool `protobuf:"varint,2,opt,name=fail_tx_on_bel,json=failTxOnBel,proto3" json:"fail_tx_on_bel,omitempty"`
 }
 
 func (m *DepositOptions) Reset()         { *m = DepositOptions{} }
@@ -118,16 +118,23 @@ func (m *DepositOptions) GetDisableAutoswap() bool {
 	return false
 }
 
+func (m *DepositOptions) GetFailTxOnBel() bool {
+	if m != nil {
+		return m.FailTxOnBel
+	}
+	return false
+}
+
 type MsgDeposit struct {
-	Creator         string                                   `protobuf:"bytes,1,opt,name=creator,proto3" json:"creator,omitempty"`
-	Receiver        string                                   `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
-	TokenA          string                                   `protobuf:"bytes,3,opt,name=token_a,json=tokenA,proto3" json:"token_a,omitempty"`
-	TokenB          string                                   `protobuf:"bytes,4,opt,name=token_b,json=tokenB,proto3" json:"token_b,omitempty"`
-	AmountsA        []github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,5,rep,name=amounts_a,json=amountsA,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"amounts_a" yaml:"amounts_a"`
-	AmountsB        []github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,6,rep,name=amounts_b,json=amountsB,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"amounts_b" yaml:"amounts_b"`
-	TickIndexesAToB []int64                                  `protobuf:"varint,7,rep,packed,name=tick_indexes_a_to_b,json=tickIndexesAToB,proto3" json:"tick_indexes_a_to_b,omitempty"`
-	Fees            []uint64                                 `protobuf:"varint,8,rep,packed,name=fees,proto3" json:"fees,omitempty"`
-	Options         []*DepositOptions                        `protobuf:"bytes,9,rep,name=options,proto3" json:"options,omitempty"`
+	Creator         string                  `protobuf:"bytes,1,opt,name=creator,proto3" json:"creator,omitempty"`
+	Receiver        string                  `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
+	TokenA          string                  `protobuf:"bytes,3,opt,name=token_a,json=tokenA,proto3" json:"token_a,omitempty"`
+	TokenB          string                  `protobuf:"bytes,4,opt,name=token_b,json=tokenB,proto3" json:"token_b,omitempty"`
+	AmountsA        []cosmossdk_io_math.Int `protobuf:"bytes,5,rep,name=amounts_a,json=amountsA,proto3,customtype=cosmossdk.io/math.Int" json:"amounts_a" yaml:"amounts_a"`
+	AmountsB        []cosmossdk_io_math.Int `protobuf:"bytes,6,rep,name=amounts_b,json=amountsB,proto3,customtype=cosmossdk.io/math.Int" json:"amounts_b" yaml:"amounts_b"`
+	TickIndexesAToB []int64                 `protobuf:"varint,7,rep,packed,name=tick_indexes_a_to_b,json=tickIndexesAToB,proto3" json:"tick_indexes_a_to_b,omitempty"`
+	Fees            []uint64                `protobuf:"varint,8,rep,packed,name=fees,proto3" json:"fees,omitempty"`
+	Options         []*DepositOptions       `protobuf:"bytes,9,rep,name=options,proto3" json:"options,omitempty"`
 }
 
 func (m *MsgDeposit) Reset()         { *m = MsgDeposit{} }
@@ -212,16 +219,70 @@ func (m *MsgDeposit) GetOptions() []*DepositOptions {
 	return nil
 }
 
+type FailedDeposit struct {
+	DepositIdx uint64 `protobuf:"varint,1,opt,name=deposit_idx,json=depositIdx,proto3" json:"deposit_idx,omitempty"`
+	Error      string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+}
+
+func (m *FailedDeposit) Reset()         { *m = FailedDeposit{} }
+func (m *FailedDeposit) String() string { return proto.CompactTextString(m) }
+func (*FailedDeposit) ProtoMessage()    {}
+func (*FailedDeposit) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a489f6e187d5e074, []int{2}
+}
+func (m *FailedDeposit) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FailedDeposit) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FailedDeposit.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *FailedDeposit) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FailedDeposit.Merge(m, src)
+}
+func (m *FailedDeposit) XXX_Size() int {
+	return m.Size()
+}
+func (m *FailedDeposit) XXX_DiscardUnknown() {
+	xxx_messageInfo_FailedDeposit.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FailedDeposit proto.InternalMessageInfo
+
+func (m *FailedDeposit) GetDepositIdx() uint64 {
+	if m != nil {
+		return m.DepositIdx
+	}
+	return 0
+}
+
+func (m *FailedDeposit) GetError() string {
+	if m != nil {
+		return m.Error
+	}
+	return ""
+}
+
 type MsgDepositResponse struct {
-	Reserve0Deposited []github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,1,rep,name=reserve0_deposited,json=reserve0Deposited,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"reserve0_deposited" yaml:"reserve0_deposited"`
-	Reserve1Deposited []github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,2,rep,name=reserve1_deposited,json=reserve1Deposited,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"reserve1_deposited" yaml:"reserve1_deposited"`
+	Reserve0Deposited []cosmossdk_io_math.Int                   `protobuf:"bytes,1,rep,name=reserve0_deposited,json=reserve0Deposited,proto3,customtype=cosmossdk.io/math.Int" json:"reserve0_deposited" yaml:"reserve0_deposited"`
+	Reserve1Deposited []cosmossdk_io_math.Int                   `protobuf:"bytes,2,rep,name=reserve1_deposited,json=reserve1Deposited,proto3,customtype=cosmossdk.io/math.Int" json:"reserve1_deposited" yaml:"reserve1_deposited"`
+	FailedDeposits    []*FailedDeposit                          `protobuf:"bytes,3,rep,name=failed_deposits,json=failedDeposits,proto3" json:"failed_deposits,omitempty"`
+	SharesIssued      []github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,4,rep,name=shares_issued,json=sharesIssued,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"shares_issued" yaml:"shares_issued"`
 }
 
 func (m *MsgDepositResponse) Reset()         { *m = MsgDepositResponse{} }
 func (m *MsgDepositResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgDepositResponse) ProtoMessage()    {}
 func (*MsgDepositResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{2}
+	return fileDescriptor_a489f6e187d5e074, []int{3}
 }
 func (m *MsgDepositResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -250,21 +311,28 @@ func (m *MsgDepositResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgDepositResponse proto.InternalMessageInfo
 
+func (m *MsgDepositResponse) GetFailedDeposits() []*FailedDeposit {
+	if m != nil {
+		return m.FailedDeposits
+	}
+	return nil
+}
+
 type MsgWithdrawal struct {
-	Creator         string                                   `protobuf:"bytes,1,opt,name=creator,proto3" json:"creator,omitempty"`
-	Receiver        string                                   `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
-	TokenA          string                                   `protobuf:"bytes,3,opt,name=token_a,json=tokenA,proto3" json:"token_a,omitempty"`
-	TokenB          string                                   `protobuf:"bytes,4,opt,name=token_b,json=tokenB,proto3" json:"token_b,omitempty"`
-	SharesToRemove  []github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,5,rep,name=shares_to_remove,json=sharesToRemove,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"shares_to_remove" yaml:"shares_to_remove"`
-	TickIndexesAToB []int64                                  `protobuf:"varint,6,rep,packed,name=tick_indexes_a_to_b,json=tickIndexesAToB,proto3" json:"tick_indexes_a_to_b,omitempty"`
-	Fees            []uint64                                 `protobuf:"varint,7,rep,packed,name=fees,proto3" json:"fees,omitempty"`
+	Creator         string                  `protobuf:"bytes,1,opt,name=creator,proto3" json:"creator,omitempty"`
+	Receiver        string                  `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
+	TokenA          string                  `protobuf:"bytes,3,opt,name=token_a,json=tokenA,proto3" json:"token_a,omitempty"`
+	TokenB          string                  `protobuf:"bytes,4,opt,name=token_b,json=tokenB,proto3" json:"token_b,omitempty"`
+	SharesToRemove  []cosmossdk_io_math.Int `protobuf:"bytes,5,rep,name=shares_to_remove,json=sharesToRemove,proto3,customtype=cosmossdk.io/math.Int" json:"shares_to_remove" yaml:"shares_to_remove"`
+	TickIndexesAToB []int64                 `protobuf:"varint,6,rep,packed,name=tick_indexes_a_to_b,json=tickIndexesAToB,proto3" json:"tick_indexes_a_to_b,omitempty"`
+	Fees            []uint64                `protobuf:"varint,7,rep,packed,name=fees,proto3" json:"fees,omitempty"`
 }
 
 func (m *MsgWithdrawal) Reset()         { *m = MsgWithdrawal{} }
 func (m *MsgWithdrawal) String() string { return proto.CompactTextString(m) }
 func (*MsgWithdrawal) ProtoMessage()    {}
 func (*MsgWithdrawal) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{3}
+	return fileDescriptor_a489f6e187d5e074, []int{4}
 }
 func (m *MsgWithdrawal) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -336,13 +404,16 @@ func (m *MsgWithdrawal) GetFees() []uint64 {
 }
 
 type MsgWithdrawalResponse struct {
+	Reserve0Withdrawn cosmossdk_io_math.Int                     `protobuf:"bytes,1,opt,name=reserve0_withdrawn,json=reserve0Withdrawn,proto3,customtype=cosmossdk.io/math.Int" json:"reserve0_withdrawn" yaml:"reserve0_withdrawn"`
+	Reserve1Withdrawn cosmossdk_io_math.Int                     `protobuf:"bytes,2,opt,name=reserve1_withdrawn,json=reserve1Withdrawn,proto3,customtype=cosmossdk.io/math.Int" json:"reserve1_withdrawn" yaml:"reserve1_withdrawn"`
+	SharesBurned      []github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,3,rep,name=shares_burned,json=sharesBurned,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"shares_burned" yaml:"shares_burned"`
 }
 
 func (m *MsgWithdrawalResponse) Reset()         { *m = MsgWithdrawalResponse{} }
 func (m *MsgWithdrawalResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgWithdrawalResponse) ProtoMessage()    {}
 func (*MsgWithdrawalResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{4}
+	return fileDescriptor_a489f6e187d5e074, []int{5}
 }
 func (m *MsgWithdrawalResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -372,23 +443,25 @@ func (m *MsgWithdrawalResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_MsgWithdrawalResponse proto.InternalMessageInfo
 
 type MsgPlaceLimitOrder struct {
-	Creator          string                                 `protobuf:"bytes,1,opt,name=creator,proto3" json:"creator,omitempty"`
-	Receiver         string                                 `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
-	TokenIn          string                                 `protobuf:"bytes,3,opt,name=token_in,json=tokenIn,proto3" json:"token_in,omitempty"`
-	TokenOut         string                                 `protobuf:"bytes,4,opt,name=token_out,json=tokenOut,proto3" json:"token_out,omitempty"`
-	TickIndexInToOut int64                                  `protobuf:"varint,5,opt,name=tick_index_in_to_out,json=tickIndexInToOut,proto3" json:"tick_index_in_to_out,omitempty"`
-	AmountIn         github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,7,opt,name=amount_in,json=amountIn,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"amount_in" yaml:"amount_in"`
-	OrderType        LimitOrderType                         `protobuf:"varint,8,opt,name=order_type,json=orderType,proto3,enum=neutron.dex.LimitOrderType" json:"order_type,omitempty"`
+	Creator  string `protobuf:"bytes,1,opt,name=creator,proto3" json:"creator,omitempty"`
+	Receiver string `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
+	TokenIn  string `protobuf:"bytes,3,opt,name=token_in,json=tokenIn,proto3" json:"token_in,omitempty"`
+	TokenOut string `protobuf:"bytes,4,opt,name=token_out,json=tokenOut,proto3" json:"token_out,omitempty"`
+	// DEPRECATED: tick_index_in_to_out will be removed in future release; limit_sell_price should be used instead.
+	TickIndexInToOut int64                 `protobuf:"varint,5,opt,name=tick_index_in_to_out,json=tickIndexInToOut,proto3" json:"tick_index_in_to_out,omitempty"` // Deprecated: Do not use.
+	AmountIn         cosmossdk_io_math.Int `protobuf:"bytes,7,opt,name=amount_in,json=amountIn,proto3,customtype=cosmossdk.io/math.Int" json:"amount_in" yaml:"amount_in"`
+	OrderType        LimitOrderType        `protobuf:"varint,8,opt,name=order_type,json=orderType,proto3,enum=neutron.dex.LimitOrderType" json:"order_type,omitempty"`
 	// expirationTime is only valid iff orderType == GOOD_TIL_TIME.
-	ExpirationTime *time.Time                              `protobuf:"bytes,9,opt,name=expiration_time,json=expirationTime,proto3,stdtime" json:"expiration_time,omitempty"`
-	MaxAmountOut   *github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,10,opt,name=max_amount_out,json=maxAmountOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"max_amount_out" yaml:"max_amount_out"`
+	ExpirationTime *time.Time                                            `protobuf:"bytes,9,opt,name=expiration_time,json=expirationTime,proto3,stdtime" json:"expiration_time,omitempty"`
+	MaxAmountOut   *cosmossdk_io_math.Int                                `protobuf:"bytes,10,opt,name=max_amount_out,json=maxAmountOut,proto3,customtype=cosmossdk.io/math.Int" json:"max_amount_out" yaml:"max_amount_out"`
+	LimitSellPrice *github_com_neutron_org_neutron_v4_utils_math.PrecDec `protobuf:"bytes,11,opt,name=limit_sell_price,json=limitSellPrice,proto3,customtype=github.com/neutron-org/neutron/v4/utils/math.PrecDec" json:"limit_sell_price" yaml:"limit_sell_price"`
 }
 
 func (m *MsgPlaceLimitOrder) Reset()         { *m = MsgPlaceLimitOrder{} }
 func (m *MsgPlaceLimitOrder) String() string { return proto.CompactTextString(m) }
 func (*MsgPlaceLimitOrder) ProtoMessage()    {}
 func (*MsgPlaceLimitOrder) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{5}
+	return fileDescriptor_a489f6e187d5e074, []int{6}
 }
 func (m *MsgPlaceLimitOrder) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -445,6 +518,7 @@ func (m *MsgPlaceLimitOrder) GetTokenOut() string {
 	return ""
 }
 
+// Deprecated: Do not use.
 func (m *MsgPlaceLimitOrder) GetTickIndexInToOut() int64 {
 	if m != nil {
 		return m.TickIndexInToOut
@@ -475,13 +549,15 @@ type MsgPlaceLimitOrderResponse struct {
 	// executing the limit order. It does not include any future proceeds from the
 	// maker portion which will have withdrawn in the future
 	TakerCoinOut github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,3,opt,name=taker_coin_out,json=takerCoinOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"taker_coin_out" yaml:"taker_coin_out"`
+	// Total amount of the token in that was immediately swapped for takerOutCoin
+	TakerCoinIn github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,4,opt,name=taker_coin_in,json=takerCoinIn,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"taker_coin_in" yaml:"taker_coin_in"`
 }
 
 func (m *MsgPlaceLimitOrderResponse) Reset()         { *m = MsgPlaceLimitOrderResponse{} }
 func (m *MsgPlaceLimitOrderResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgPlaceLimitOrderResponse) ProtoMessage()    {}
 func (*MsgPlaceLimitOrderResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{6}
+	return fileDescriptor_a489f6e187d5e074, []int{7}
 }
 func (m *MsgPlaceLimitOrderResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -526,7 +602,7 @@ func (m *MsgWithdrawFilledLimitOrder) Reset()         { *m = MsgWithdrawFilledLi
 func (m *MsgWithdrawFilledLimitOrder) String() string { return proto.CompactTextString(m) }
 func (*MsgWithdrawFilledLimitOrder) ProtoMessage()    {}
 func (*MsgWithdrawFilledLimitOrder) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{7}
+	return fileDescriptor_a489f6e187d5e074, []int{8}
 }
 func (m *MsgWithdrawFilledLimitOrder) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -570,13 +646,17 @@ func (m *MsgWithdrawFilledLimitOrder) GetTrancheKey() string {
 }
 
 type MsgWithdrawFilledLimitOrderResponse struct {
+	// Total amount of taker reserves that were withdrawn
+	TakerCoinOut github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,1,opt,name=taker_coin_out,json=takerCoinOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"taker_coin_out" yaml:"taker_coin_out"`
+	// Total amount of maker reserves that were withdrawn --only applies to inactive LimitOrders
+	MakerCoinOut github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,2,opt,name=maker_coin_out,json=makerCoinOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"maker_coin_out" yaml:"maker_coin_out"`
 }
 
 func (m *MsgWithdrawFilledLimitOrderResponse) Reset()         { *m = MsgWithdrawFilledLimitOrderResponse{} }
 func (m *MsgWithdrawFilledLimitOrderResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgWithdrawFilledLimitOrderResponse) ProtoMessage()    {}
 func (*MsgWithdrawFilledLimitOrderResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{8}
+	return fileDescriptor_a489f6e187d5e074, []int{9}
 }
 func (m *MsgWithdrawFilledLimitOrderResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -614,7 +694,7 @@ func (m *MsgCancelLimitOrder) Reset()         { *m = MsgCancelLimitOrder{} }
 func (m *MsgCancelLimitOrder) String() string { return proto.CompactTextString(m) }
 func (*MsgCancelLimitOrder) ProtoMessage()    {}
 func (*MsgCancelLimitOrder) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{9}
+	return fileDescriptor_a489f6e187d5e074, []int{10}
 }
 func (m *MsgCancelLimitOrder) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -658,13 +738,17 @@ func (m *MsgCancelLimitOrder) GetTrancheKey() string {
 }
 
 type MsgCancelLimitOrderResponse struct {
+	// Total amount of taker reserves that were withdrawn
+	TakerCoinOut github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,1,opt,name=taker_coin_out,json=takerCoinOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"taker_coin_out" yaml:"taker_coin_out"`
+	// Total amount of maker reserves that were canceled
+	MakerCoinOut github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,2,opt,name=maker_coin_out,json=makerCoinOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"maker_coin_out" yaml:"maker_coin_out"`
 }
 
 func (m *MsgCancelLimitOrderResponse) Reset()         { *m = MsgCancelLimitOrderResponse{} }
 func (m *MsgCancelLimitOrderResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgCancelLimitOrderResponse) ProtoMessage()    {}
 func (*MsgCancelLimitOrderResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{10}
+	return fileDescriptor_a489f6e187d5e074, []int{11}
 }
 func (m *MsgCancelLimitOrderResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -701,7 +785,7 @@ func (m *MultiHopRoute) Reset()         { *m = MultiHopRoute{} }
 func (m *MultiHopRoute) String() string { return proto.CompactTextString(m) }
 func (*MultiHopRoute) ProtoMessage()    {}
 func (*MultiHopRoute) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{11}
+	return fileDescriptor_a489f6e187d5e074, []int{12}
 }
 func (m *MultiHopRoute) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -741,8 +825,8 @@ type MsgMultiHopSwap struct {
 	Creator        string                                               `protobuf:"bytes,1,opt,name=creator,proto3" json:"creator,omitempty"`
 	Receiver       string                                               `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
 	Routes         []*MultiHopRoute                                     `protobuf:"bytes,3,rep,name=routes,proto3" json:"routes,omitempty"`
-	AmountIn       github_com_cosmos_cosmos_sdk_types.Int               `protobuf:"bytes,4,opt,name=amount_in,json=amountIn,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"amount_in" yaml:"amount_in"`
-	ExitLimitPrice github_com_neutron_org_neutron_v3_utils_math.PrecDec `protobuf:"bytes,5,opt,name=exit_limit_price,json=exitLimitPrice,proto3,customtype=github.com/neutron-org/neutron/v3/utils/math.PrecDec" json:"exit_limit_price" yaml:"exit_limit_price"`
+	AmountIn       cosmossdk_io_math.Int                                `protobuf:"bytes,4,opt,name=amount_in,json=amountIn,proto3,customtype=cosmossdk.io/math.Int" json:"amount_in" yaml:"amount_in"`
+	ExitLimitPrice github_com_neutron_org_neutron_v4_utils_math.PrecDec `protobuf:"bytes,5,opt,name=exit_limit_price,json=exitLimitPrice,proto3,customtype=github.com/neutron-org/neutron/v4/utils/math.PrecDec" json:"exit_limit_price" yaml:"exit_limit_price"`
 	// If pickBestRoute == true then all routes are run and the route with the
 	// best price is chosen otherwise, the first succesful route is used.
 	PickBestRoute bool `protobuf:"varint,6,opt,name=pick_best_route,json=pickBestRoute,proto3" json:"pick_best_route,omitempty"`
@@ -752,7 +836,7 @@ func (m *MsgMultiHopSwap) Reset()         { *m = MsgMultiHopSwap{} }
 func (m *MsgMultiHopSwap) String() string { return proto.CompactTextString(m) }
 func (*MsgMultiHopSwap) ProtoMessage()    {}
 func (*MsgMultiHopSwap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{12}
+	return fileDescriptor_a489f6e187d5e074, []int{13}
 }
 func (m *MsgMultiHopSwap) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -810,14 +894,16 @@ func (m *MsgMultiHopSwap) GetPickBestRoute() bool {
 }
 
 type MsgMultiHopSwapResponse struct {
-	CoinOut github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,1,opt,name=coin_out,json=coinOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"coin_out"`
+	CoinOut github_com_cosmos_cosmos_sdk_types.Coin   `protobuf:"bytes,1,opt,name=coin_out,json=coinOut,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"coin_out" yaml:"coin_out"`
+	Route   *MultiHopRoute                            `protobuf:"bytes,2,opt,name=route,proto3" json:"route,omitempty"`
+	Dust    []github_com_cosmos_cosmos_sdk_types.Coin `protobuf:"bytes,3,rep,name=dust,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Coin" json:"dust" yaml:"dust"`
 }
 
 func (m *MsgMultiHopSwapResponse) Reset()         { *m = MsgMultiHopSwapResponse{} }
 func (m *MsgMultiHopSwapResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgMultiHopSwapResponse) ProtoMessage()    {}
 func (*MsgMultiHopSwapResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{13}
+	return fileDescriptor_a489f6e187d5e074, []int{14}
 }
 func (m *MsgMultiHopSwapResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -846,6 +932,13 @@ func (m *MsgMultiHopSwapResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgMultiHopSwapResponse proto.InternalMessageInfo
 
+func (m *MsgMultiHopSwapResponse) GetRoute() *MultiHopRoute {
+	if m != nil {
+		return m.Route
+	}
+	return nil
+}
+
 type MsgUpdateParams struct {
 	// Authority is the address of the governance account.
 	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
@@ -857,7 +950,7 @@ func (m *MsgUpdateParams) Reset()         { *m = MsgUpdateParams{} }
 func (m *MsgUpdateParams) String() string { return proto.CompactTextString(m) }
 func (*MsgUpdateParams) ProtoMessage()    {}
 func (*MsgUpdateParams) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{14}
+	return fileDescriptor_a489f6e187d5e074, []int{15}
 }
 func (m *MsgUpdateParams) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -911,7 +1004,7 @@ func (m *MsgUpdateParamsResponse) Reset()         { *m = MsgUpdateParamsResponse
 func (m *MsgUpdateParamsResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgUpdateParamsResponse) ProtoMessage()    {}
 func (*MsgUpdateParamsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a489f6e187d5e074, []int{15}
+	return fileDescriptor_a489f6e187d5e074, []int{16}
 }
 func (m *MsgUpdateParamsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -944,6 +1037,7 @@ func init() {
 	proto.RegisterEnum("neutron.dex.LimitOrderType", LimitOrderType_name, LimitOrderType_value)
 	proto.RegisterType((*DepositOptions)(nil), "neutron.dex.DepositOptions")
 	proto.RegisterType((*MsgDeposit)(nil), "neutron.dex.MsgDeposit")
+	proto.RegisterType((*FailedDeposit)(nil), "neutron.dex.FailedDeposit")
 	proto.RegisterType((*MsgDepositResponse)(nil), "neutron.dex.MsgDepositResponse")
 	proto.RegisterType((*MsgWithdrawal)(nil), "neutron.dex.MsgWithdrawal")
 	proto.RegisterType((*MsgWithdrawalResponse)(nil), "neutron.dex.MsgWithdrawalResponse")
@@ -963,102 +1057,126 @@ func init() {
 func init() { proto.RegisterFile("neutron/dex/tx.proto", fileDescriptor_a489f6e187d5e074) }
 
 var fileDescriptor_a489f6e187d5e074 = []byte{
-	// 1506 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x58, 0xcd, 0x6f, 0x1b, 0x45,
-	0x1b, 0xcf, 0xc6, 0xa9, 0x3f, 0x26, 0x89, 0xe3, 0x4e, 0xd2, 0x37, 0x1b, 0xf7, 0x7d, 0x6d, 0x6b,
-	0xfb, 0xbe, 0xad, 0xdf, 0x88, 0xd8, 0x4d, 0x0a, 0x3d, 0xb4, 0x27, 0x3b, 0x49, 0x8b, 0xa9, 0x5d,
-	0x47, 0x5b, 0x57, 0x40, 0x11, 0xac, 0xc6, 0xf6, 0xd4, 0x59, 0xc5, 0xde, 0x59, 0x76, 0xc6, 0xae,
-	0x73, 0x02, 0x71, 0x41, 0x42, 0x1c, 0x7a, 0xe1, 0xc4, 0x3f, 0x40, 0x25, 0x0e, 0x3d, 0x70, 0xe2,
-	0xca, 0xa5, 0xdc, 0x2a, 0x4e, 0x08, 0x09, 0x83, 0xda, 0x43, 0xa5, 0x1e, 0x23, 0x71, 0x47, 0x33,
-	0x3b, 0x5e, 0xaf, 0xd7, 0x4d, 0xd2, 0xb4, 0xc0, 0x25, 0x9e, 0x79, 0x7e, 0xcf, 0x3c, 0xf3, 0xcc,
-	0x6f, 0x9e, 0x8f, 0xd9, 0x80, 0x25, 0x0b, 0x77, 0x99, 0x43, 0xac, 0x7c, 0x13, 0xf7, 0xf3, 0xac,
-	0x9f, 0xb3, 0x1d, 0xc2, 0x08, 0x9c, 0x95, 0xd2, 0x5c, 0x13, 0xf7, 0x93, 0xa7, 0x51, 0xc7, 0xb4,
-	0x48, 0x5e, 0xfc, 0x75, 0xf1, 0x64, 0xaa, 0x41, 0x68, 0x87, 0xd0, 0x7c, 0x1d, 0x51, 0x9c, 0xef,
-	0xad, 0xd7, 0x31, 0x43, 0xeb, 0xf9, 0x06, 0x31, 0x2d, 0x89, 0x2f, 0x4b, 0xbc, 0x43, 0x5b, 0xf9,
-	0xde, 0x3a, 0xff, 0x91, 0xc0, 0x8a, 0x0b, 0x18, 0x62, 0x96, 0x77, 0x27, 0x12, 0x5a, 0x6a, 0x91,
-	0x16, 0x71, 0xe5, 0x7c, 0x24, 0xa5, 0xe9, 0x16, 0x21, 0xad, 0x36, 0xce, 0x8b, 0x59, 0xbd, 0x7b,
-	0x37, 0xcf, 0xcc, 0x0e, 0xa6, 0x0c, 0x75, 0x6c, 0xa9, 0xa0, 0xfa, 0x0f, 0x60, 0x23, 0x07, 0x75,
-	0xa4, 0x41, 0xed, 0x2a, 0x88, 0x6f, 0x61, 0x9b, 0x50, 0x93, 0x55, 0x6d, 0x66, 0x12, 0x8b, 0xc2,
-	0xff, 0x83, 0x44, 0xd3, 0xa4, 0xa8, 0xde, 0xc6, 0x06, 0xea, 0x32, 0x42, 0xef, 0x21, 0x5b, 0x55,
-	0x32, 0x4a, 0x36, 0xaa, 0x2f, 0x48, 0x79, 0x41, 0x8a, 0xb5, 0x1f, 0x43, 0x00, 0x54, 0x68, 0x4b,
-	0x1a, 0x80, 0x2a, 0x88, 0x34, 0x1c, 0x8c, 0x18, 0x71, 0xc4, 0x82, 0x98, 0x3e, 0x9c, 0xc2, 0x24,
-	0x88, 0x3a, 0xb8, 0x81, 0xcd, 0x1e, 0x76, 0xd4, 0x69, 0x01, 0x79, 0x73, 0xb8, 0x0c, 0x22, 0x8c,
-	0xec, 0x61, 0xcb, 0x40, 0x6a, 0x48, 0x40, 0x61, 0x31, 0x2d, 0x8c, 0x80, 0xba, 0x3a, 0xe3, 0x03,
-	0x8a, 0xb0, 0x0d, 0x62, 0xa8, 0x43, 0xba, 0x16, 0xa3, 0x06, 0x52, 0x4f, 0x65, 0x42, 0xd9, 0x58,
-	0xb1, 0xfa, 0x68, 0x90, 0x9e, 0xfa, 0x65, 0x90, 0x3e, 0xdf, 0x32, 0xd9, 0x6e, 0xb7, 0x9e, 0x6b,
-	0x90, 0x8e, 0x24, 0x4e, 0xfe, 0xac, 0xd1, 0xe6, 0x5e, 0x9e, 0xed, 0xdb, 0x98, 0xe6, 0x4a, 0x16,
-	0x7b, 0x3e, 0x48, 0x8f, 0x4c, 0x1c, 0x0c, 0xd2, 0x89, 0x7d, 0xd4, 0x69, 0x5f, 0xd1, 0x3c, 0x91,
-	0xa6, 0x47, 0xe5, 0xb8, 0xe0, 0xdf, 0xad, 0xae, 0x86, 0x5f, 0x77, 0xb7, 0xfa, 0xe4, 0x6e, 0xf5,
-	0xd1, 0x6e, 0x45, 0xf8, 0x06, 0x58, 0x64, 0x66, 0x63, 0xcf, 0x30, 0xad, 0x26, 0xee, 0x63, 0x6a,
-	0x20, 0x83, 0x11, 0xa3, 0xae, 0x46, 0x32, 0xa1, 0x6c, 0x48, 0x5f, 0xe0, 0x50, 0xc9, 0x45, 0x0a,
-	0x35, 0x52, 0x84, 0x10, 0xcc, 0xdc, 0xc5, 0x98, 0xaa, 0xd1, 0x4c, 0x28, 0x3b, 0xa3, 0x8b, 0x31,
-	0x7c, 0x0b, 0x44, 0x88, 0x7b, 0x95, 0x6a, 0x2c, 0x13, 0xca, 0xce, 0x6e, 0x9c, 0xcd, 0xf9, 0x02,
-	0x35, 0x37, 0x7e, 0xdb, 0xfa, 0x50, 0x57, 0xfb, 0x7e, 0x1a, 0xc0, 0xd1, 0x5d, 0xea, 0x98, 0xda,
-	0xc4, 0xa2, 0x18, 0xde, 0x57, 0x00, 0x74, 0x30, 0xc5, 0x4e, 0x0f, 0x5f, 0x34, 0x9a, 0x2e, 0x88,
-	0x9b, 0xaa, 0x22, 0x78, 0x40, 0x27, 0xe6, 0xe1, 0x05, 0xb6, 0x0e, 0x06, 0xe9, 0x15, 0x97, 0x90,
-	0x49, 0x4c, 0xd3, 0x4f, 0x0f, 0x85, 0x5b, 0x43, 0x99, 0xdf, 0xa5, 0x75, 0x9f, 0x4b, 0xd3, 0xaf,
-	0xe9, 0xd2, 0xfa, 0x11, 0x2e, 0xad, 0xbf, 0xc8, 0xa5, 0x75, 0xcf, 0x25, 0xed, 0x87, 0x69, 0x30,
-	0x5f, 0xa1, 0xad, 0x77, 0x4d, 0xb6, 0xdb, 0x74, 0xd0, 0x3d, 0xd4, 0xfe, 0xc7, 0x72, 0xe1, 0x73,
-	0x05, 0x24, 0xe8, 0x2e, 0x72, 0x30, 0xe5, 0x81, 0xe2, 0xe0, 0x0e, 0xe9, 0x61, 0x99, 0x13, 0x1f,
-	0x9e, 0x98, 0x8a, 0x09, 0x4b, 0x07, 0x83, 0xf4, 0xb2, 0x4b, 0x44, 0x10, 0xd1, 0xf4, 0xb8, 0x2b,
-	0xaa, 0x11, 0x5d, 0x08, 0x0e, 0x8b, 0xdc, 0xf0, 0xd1, 0x91, 0x1b, 0x19, 0x45, 0xae, 0xb6, 0x0c,
-	0xce, 0x8c, 0x91, 0x38, 0x0c, 0x42, 0xed, 0xdb, 0x19, 0x11, 0x9b, 0x3b, 0x6d, 0xd4, 0xc0, 0x65,
-	0xb3, 0x63, 0xb2, 0xaa, 0xd3, 0xc4, 0xce, 0x2b, 0x72, 0xbc, 0x02, 0xa2, 0x2e, 0x95, 0xa6, 0x25,
-	0x49, 0x76, 0xa9, 0x2d, 0x59, 0xf0, 0x2c, 0x88, 0xb9, 0x10, 0xe9, 0x32, 0xc9, 0xb3, 0xab, 0x5b,
-	0xed, 0x32, 0x98, 0x03, 0x4b, 0xa3, 0xf3, 0x19, 0xa6, 0xc5, 0x8f, 0xc7, 0xf5, 0x4e, 0x65, 0x94,
-	0x6c, 0x48, 0x4f, 0x78, 0x07, 0x2c, 0x59, 0x35, 0xc2, 0xf5, 0xbd, 0xba, 0xc1, 0x37, 0x8a, 0x70,
-	0x63, 0xaf, 0x5e, 0x37, 0x0c, 0xd3, 0x0a, 0xd6, 0x0d, 0xc3, 0xb4, 0xbc, 0xba, 0x51, 0xb2, 0xe0,
-	0x15, 0x00, 0x08, 0x27, 0xc5, 0xe0, 0xab, 0xd5, 0x68, 0x46, 0xc9, 0xc6, 0x03, 0x89, 0x3f, 0x22,
-	0xae, 0xb6, 0x6f, 0x63, 0x3d, 0x46, 0x86, 0x43, 0x58, 0x01, 0x0b, 0xb8, 0x6f, 0x9b, 0x0e, 0xe2,
-	0x95, 0xc0, 0xe0, 0xbd, 0x43, 0x8d, 0x65, 0x94, 0xec, 0xec, 0x46, 0x32, 0xe7, 0x36, 0x96, 0xdc,
-	0xb0, 0xb1, 0xe4, 0x6a, 0xc3, 0xc6, 0x52, 0x8c, 0x3e, 0x1a, 0xa4, 0x95, 0xfb, 0xbf, 0xa5, 0x15,
-	0x3d, 0x3e, 0x5a, 0xcc, 0x61, 0xf8, 0x09, 0x88, 0x77, 0x50, 0xdf, 0x90, 0x6e, 0x72, 0x8a, 0x80,
-	0x38, 0xfd, 0xfb, 0x7c, 0xc5, 0x89, 0x4e, 0x1f, 0xb0, 0x73, 0x30, 0x48, 0x9f, 0x71, 0x29, 0x18,
-	0x97, 0x6b, 0xfa, 0x5c, 0x07, 0xf5, 0x0b, 0x62, 0x5e, 0xed, 0x32, 0xed, 0xd7, 0x69, 0x90, 0x9c,
-	0x0c, 0x17, 0xaf, 0xa4, 0xa5, 0x00, 0x60, 0x0e, 0xb2, 0x1a, 0xbb, 0xf8, 0x06, 0xde, 0x97, 0x91,
-	0xe3, 0x93, 0xc0, 0x4f, 0x15, 0x10, 0xe1, 0x6d, 0x9a, 0xdf, 0xdb, 0xb4, 0xe0, 0x61, 0x25, 0x27,
-	0x9b, 0x30, 0x6f, 0xe5, 0x39, 0xd9, 0xca, 0x73, 0x9b, 0xc4, 0xb4, 0x8a, 0x65, 0x79, 0xa5, 0x17,
-	0x5e, 0xe2, 0x50, 0x7c, 0xc1, 0xf3, 0x41, 0x7a, 0x68, 0xfc, 0x60, 0x90, 0x8e, 0xbb, 0xc7, 0x91,
-	0x02, 0x4d, 0x0f, 0xf3, 0x51, 0xc9, 0x82, 0x5f, 0x2b, 0x20, 0xce, 0xd0, 0x1e, 0x76, 0x0c, 0x01,
-	0x71, 0x0e, 0x43, 0xc7, 0x79, 0x72, 0xe7, 0xe4, 0x9e, 0x04, 0xf6, 0x18, 0xf1, 0x3b, 0x2e, 0xd7,
-	0xf4, 0x39, 0x21, 0xe0, 0xab, 0x38, 0xbf, 0xef, 0x81, 0xb3, 0xbe, 0x3c, 0xbd, 0x66, 0xb6, 0xdb,
-	0xb8, 0xf9, 0x52, 0x69, 0x99, 0x06, 0xb3, 0x92, 0x67, 0x63, 0x0f, 0xef, 0xcb, 0xcc, 0xf4, 0x51,
-	0xaf, 0xfd, 0x0f, 0x9c, 0x3b, 0xc2, 0xb2, 0x57, 0x0f, 0x76, 0xc0, 0x62, 0x85, 0xb6, 0x36, 0x91,
-	0xd5, 0xc0, 0xed, 0xbf, 0x66, 0xe3, 0xff, 0x88, 0x23, 0x05, 0x2d, 0x7a, 0x1b, 0x9e, 0x03, 0xf3,
-	0x95, 0x6e, 0x9b, 0x99, 0x6f, 0x13, 0x5b, 0x27, 0x5d, 0x86, 0x79, 0xf9, 0xda, 0x25, 0x36, 0x75,
-	0xfb, 0xa0, 0x2e, 0xc6, 0xda, 0x83, 0x10, 0x58, 0xa8, 0xd0, 0xd6, 0x50, 0xf1, 0xd6, 0x3d, 0x64,
-	0xbf, 0x62, 0x89, 0xda, 0x00, 0x61, 0x87, 0x6f, 0x43, 0xd5, 0x90, 0xe8, 0xe0, 0xc9, 0xb1, 0x44,
-	0x1e, 0xf3, 0x44, 0x97, 0x9a, 0xe3, 0xe5, 0x66, 0xe6, 0xef, 0x2e, 0x37, 0x5f, 0x29, 0x20, 0x81,
-	0xfb, 0x26, 0x33, 0xda, 0x9c, 0x2c, 0xc3, 0x76, 0xcc, 0x06, 0x16, 0x95, 0x30, 0x56, 0xdc, 0x93,
-	0xbb, 0xbe, 0xe9, 0xdb, 0x55, 0xba, 0xbf, 0x46, 0x9c, 0xd6, 0x70, 0x9c, 0xef, 0x5d, 0xca, 0x77,
-	0x99, 0xd9, 0xa6, 0xf9, 0x0e, 0x62, 0xbb, 0xb9, 0x1d, 0x07, 0x37, 0xb6, 0x70, 0x83, 0x37, 0xa1,
-	0xa0, 0xdd, 0x51, 0x13, 0x0a, 0x22, 0x1a, 0xaf, 0x3d, 0x26, 0x13, 0x17, 0xb6, 0xc3, 0x05, 0xf0,
-	0x3c, 0x58, 0xb0, 0x79, 0x91, 0xae, 0x63, 0xca, 0x0c, 0xc1, 0x8c, 0x1a, 0x16, 0x6f, 0xd7, 0x79,
-	0x2e, 0x2e, 0x62, 0xca, 0x04, 0x6b, 0xda, 0x97, 0x0a, 0x58, 0x0e, 0xdc, 0x95, 0x57, 0x1f, 0x3e,
-	0x06, 0x51, 0x2f, 0xeb, 0x94, 0xe3, 0xb2, 0xee, 0xea, 0xc9, 0xb3, 0xce, 0xb3, 0xae, 0x8b, 0x4a,
-	0xc0, 0x33, 0xea, 0x81, 0x22, 0x42, 0xe7, 0xb6, 0xdd, 0x44, 0x0c, 0xef, 0x88, 0xf7, 0x39, 0xbc,
-	0x0c, 0x62, 0xa8, 0xcb, 0x76, 0x89, 0x63, 0x32, 0x59, 0xa5, 0x8a, 0xea, 0x4f, 0xdf, 0xad, 0x2d,
-	0x49, 0x57, 0x0a, 0xcd, 0xa6, 0x83, 0x29, 0xbd, 0xc5, 0x1c, 0xd3, 0x6a, 0xe9, 0x23, 0x55, 0x78,
-	0x19, 0x84, 0xdd, 0x17, 0xbe, 0x2c, 0x5e, 0x8b, 0x63, 0xc1, 0xe3, 0x1a, 0x2f, 0xc6, 0xb8, 0xdb,
-	0xdf, 0x3c, 0x7b, 0xb8, 0xaa, 0xe8, 0x52, 0xfb, 0xca, 0xf9, 0xcf, 0x9e, 0x3d, 0x5c, 0x1d, 0xd9,
-	0xf9, 0xe2, 0xd9, 0xc3, 0xd5, 0x45, 0xfe, 0xb9, 0x10, 0xf0, 0x4b, 0x5b, 0x11, 0xcc, 0xf9, 0x45,
-	0x43, 0xe6, 0x56, 0xfb, 0x20, 0x3e, 0xde, 0x65, 0xe0, 0xbf, 0x00, 0xbc, 0x5e, 0xad, 0x6e, 0x19,
-	0xb5, 0x52, 0xd9, 0xd8, 0x2c, 0xdc, 0xdc, 0xdc, 0x2e, 0x97, 0xb7, 0xb7, 0x12, 0x53, 0x30, 0x01,
-	0xe6, 0xae, 0x95, 0xca, 0x65, 0xa3, 0xaa, 0x1b, 0x37, 0x4a, 0xe5, 0x72, 0x42, 0x81, 0xcb, 0x60,
-	0xb1, 0x54, 0xa9, 0x6c, 0x6f, 0x95, 0x0a, 0xb5, 0x6d, 0x2e, 0x76, 0xb5, 0x13, 0xd3, 0x5c, 0xf5,
-	0x9d, 0xdb, 0xb7, 0x6a, 0x46, 0xe9, 0xa6, 0x51, 0x2b, 0x55, 0xb6, 0x13, 0x21, 0x78, 0x1a, 0xcc,
-	0x7b, 0x46, 0x85, 0x68, 0x66, 0xe3, 0x8f, 0x19, 0x10, 0xaa, 0xd0, 0x16, 0xdc, 0x04, 0x91, 0xe1,
-	0xd7, 0xc8, 0xf2, 0x78, 0xd2, 0x78, 0x4f, 0xdb, 0x64, 0xfa, 0x10, 0xc0, 0x0b, 0x80, 0x32, 0x00,
-	0xbe, 0x97, 0x5c, 0x32, 0xa8, 0x3e, 0xc2, 0x92, 0xda, 0xe1, 0x98, 0x67, 0xed, 0x03, 0xb0, 0x10,
-	0x7c, 0xb8, 0x4c, 0x78, 0x10, 0x50, 0x48, 0x5e, 0x38, 0x46, 0xc1, 0x33, 0xde, 0x03, 0xea, 0xa1,
-	0x75, 0x38, 0x7b, 0x98, 0x73, 0x41, 0xcd, 0xe4, 0xc5, 0x97, 0xd5, 0xf4, 0xf6, 0xfd, 0x08, 0x24,
-	0x26, 0xca, 0x6f, 0x26, 0x68, 0x25, 0xa8, 0x91, 0xcc, 0x1e, 0xa7, 0xe1, 0xd9, 0xd7, 0xc1, 0xdc,
-	0x58, 0x1d, 0xfd, 0x77, 0x70, 0xa5, 0x1f, 0x4d, 0xfe, 0xf7, 0x28, 0xd4, 0x6f, 0x73, 0x2c, 0xc1,
-	0x26, 0x6c, 0xfa, 0xd1, 0x49, 0x9b, 0x2f, 0x8a, 0xf8, 0xe2, 0xf5, 0x47, 0x4f, 0x52, 0xca, 0xe3,
-	0x27, 0x29, 0xe5, 0xf7, 0x27, 0x29, 0xe5, 0xfe, 0xd3, 0xd4, 0xd4, 0xe3, 0xa7, 0xa9, 0xa9, 0x9f,
-	0x9f, 0xa6, 0xa6, 0xee, 0xac, 0x1d, 0x5f, 0xfe, 0xfa, 0xee, 0xff, 0x13, 0x78, 0x6d, 0xa8, 0x87,
-	0xc5, 0x13, 0xeb, 0xd2, 0x9f, 0x01, 0x00, 0x00, 0xff, 0xff, 0xa8, 0xfd, 0xa9, 0x6f, 0x6b, 0x10,
-	0x00, 0x00,
+	// 1896 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x59, 0xcb, 0x6f, 0x23, 0x49,
+	0x19, 0x4f, 0xdb, 0x4e, 0x62, 0x57, 0x12, 0xc7, 0xd3, 0xc9, 0x6c, 0x3a, 0x1e, 0x94, 0xb6, 0x7a,
+	0x56, 0x3b, 0x66, 0xc4, 0xd8, 0xe3, 0x61, 0xd9, 0x43, 0x0e, 0x48, 0x71, 0x1e, 0xbb, 0x66, 0xed,
+	0x49, 0xd4, 0xe3, 0x15, 0x68, 0x57, 0xa2, 0x69, 0xbb, 0x2b, 0x4e, 0x2b, 0xdd, 0x5d, 0x56, 0x57,
+	0x39, 0xe3, 0x70, 0x61, 0x85, 0x38, 0xed, 0x69, 0x2f, 0x08, 0x24, 0xfe, 0x01, 0xb8, 0xcd, 0x61,
+	0xcf, 0x9c, 0x87, 0x13, 0x2b, 0x24, 0x24, 0xe0, 0x60, 0x60, 0xe6, 0x30, 0xd2, 0x1e, 0x73, 0x80,
+	0x0b, 0x07, 0x54, 0x8f, 0x7e, 0x3a, 0x8f, 0xc9, 0x92, 0x41, 0x1c, 0xb8, 0x4c, 0xaa, 0x7e, 0xdf,
+	0x57, 0x5f, 0xfd, 0xaa, 0xbe, 0x57, 0xb9, 0x07, 0xac, 0x7a, 0x70, 0x44, 0x7c, 0xe4, 0xd5, 0x2d,
+	0x38, 0xae, 0x93, 0x71, 0x6d, 0xe8, 0x23, 0x82, 0xe4, 0x05, 0x81, 0xd6, 0x2c, 0x38, 0x2e, 0xdf,
+	0x32, 0x5d, 0xdb, 0x43, 0x75, 0xf6, 0x2f, 0x97, 0x97, 0x37, 0xfa, 0x08, 0xbb, 0x08, 0xd7, 0x7b,
+	0x26, 0x86, 0xf5, 0x93, 0x46, 0x0f, 0x12, 0xb3, 0x51, 0xef, 0x23, 0xdb, 0x13, 0xf2, 0x35, 0x21,
+	0x77, 0xf1, 0xa0, 0x7e, 0xd2, 0xa0, 0x7f, 0x84, 0x60, 0x9d, 0x0b, 0x0c, 0x36, 0xab, 0xf3, 0x89,
+	0x10, 0xad, 0x0e, 0xd0, 0x00, 0x71, 0x9c, 0x8e, 0x04, 0xaa, 0x0e, 0x10, 0x1a, 0x38, 0xb0, 0xce,
+	0x66, 0xbd, 0xd1, 0x61, 0x9d, 0xd8, 0x2e, 0xc4, 0xc4, 0x74, 0x87, 0x42, 0x41, 0x89, 0x1f, 0x60,
+	0x68, 0xfa, 0xa6, 0x2b, 0x0c, 0x6a, 0x3f, 0x02, 0xc5, 0x1d, 0x38, 0x44, 0xd8, 0x26, 0xfb, 0x43,
+	0x62, 0x23, 0x0f, 0xcb, 0xdf, 0x04, 0x25, 0xcb, 0xc6, 0x66, 0xcf, 0x81, 0x86, 0x39, 0x22, 0x08,
+	0x3f, 0x35, 0x87, 0x8a, 0x54, 0x91, 0xaa, 0x79, 0x7d, 0x59, 0xe0, 0x5b, 0x02, 0x96, 0xef, 0x82,
+	0xe2, 0xa1, 0x69, 0x3b, 0x06, 0x19, 0x1b, 0xc8, 0x33, 0x7a, 0xd0, 0x51, 0x32, 0x4c, 0x71, 0x81,
+	0xa2, 0xdd, 0xf1, 0xbe, 0xd7, 0x84, 0x8e, 0xf6, 0x3c, 0x0b, 0x40, 0x07, 0x0f, 0xc4, 0x2e, 0xb2,
+	0x02, 0xe6, 0xfb, 0x3e, 0x34, 0x09, 0xf2, 0x99, 0xd5, 0x82, 0x1e, 0x4c, 0xe5, 0x32, 0xc8, 0xfb,
+	0xb0, 0x0f, 0xed, 0x13, 0xe8, 0x33, 0x3b, 0x05, 0x3d, 0x9c, 0xcb, 0x6b, 0x60, 0x9e, 0xa0, 0x63,
+	0xe8, 0x19, 0xa6, 0x92, 0x65, 0xa2, 0x39, 0x36, 0xdd, 0x8a, 0x04, 0x3d, 0x25, 0x17, 0x13, 0x34,
+	0xe5, 0x4f, 0x40, 0xc1, 0x74, 0xd1, 0xc8, 0x23, 0xd8, 0x30, 0x95, 0xd9, 0x4a, 0xb6, 0x5a, 0x68,
+	0x7e, 0xf7, 0xf9, 0x44, 0x9d, 0xf9, 0xcb, 0x44, 0xbd, 0xcd, 0xaf, 0x14, 0x5b, 0xc7, 0x35, 0x1b,
+	0xd5, 0x5d, 0x93, 0x1c, 0xd5, 0x5a, 0x1e, 0xf9, 0x6a, 0xa2, 0x46, 0x2b, 0xce, 0x26, 0x6a, 0xe9,
+	0xd4, 0x74, 0x9d, 0x4d, 0x2d, 0x84, 0x34, 0x3d, 0x2f, 0xc6, 0x5b, 0x71, 0xe3, 0x3d, 0x65, 0xee,
+	0x9a, 0xc6, 0x7b, 0xd3, 0xc6, 0x7b, 0x91, 0xf1, 0xa6, 0xfc, 0x2d, 0xb0, 0x42, 0xec, 0xfe, 0xb1,
+	0x61, 0x7b, 0x16, 0x1c, 0x43, 0x6c, 0x98, 0x06, 0x41, 0x46, 0x4f, 0x99, 0xaf, 0x64, 0xab, 0x59,
+	0x7d, 0x99, 0x8a, 0x5a, 0x5c, 0xb2, 0xd5, 0x45, 0x4d, 0x59, 0x06, 0xb9, 0x43, 0x08, 0xb1, 0x92,
+	0xaf, 0x64, 0xab, 0x39, 0x9d, 0x8d, 0xe5, 0xef, 0x80, 0x79, 0xc4, 0xbd, 0xa9, 0x14, 0x2a, 0xd9,
+	0xea, 0xc2, 0xa3, 0x3b, 0xb5, 0x58, 0xac, 0xd6, 0x92, 0x0e, 0xd7, 0x03, 0xdd, 0x4d, 0xf5, 0xa7,
+	0xaf, 0x9e, 0xdd, 0x0f, 0xdc, 0xf1, 0xd9, 0xab, 0x67, 0xf7, 0x8b, 0x34, 0x5c, 0x22, 0xdf, 0x69,
+	0x7b, 0x60, 0x69, 0xcf, 0xb4, 0x1d, 0x68, 0x05, 0xce, 0x54, 0xc1, 0x82, 0xc5, 0x87, 0x86, 0x6d,
+	0x8d, 0x99, 0x43, 0x73, 0x3a, 0x10, 0x50, 0xcb, 0x1a, 0xcb, 0xab, 0x60, 0x16, 0xfa, 0x3e, 0x0a,
+	0x1c, 0xca, 0x27, 0xda, 0x3f, 0xb2, 0x40, 0x8e, 0xcc, 0xea, 0x10, 0x0f, 0x91, 0x87, 0xa1, 0xfc,
+	0x13, 0x20, 0xfb, 0x10, 0x43, 0xff, 0x04, 0x3e, 0x34, 0x84, 0x0d, 0x68, 0x29, 0x12, 0xbb, 0xde,
+	0x83, 0xab, 0xae, 0xf7, 0x9c, 0xa5, 0x67, 0x13, 0x75, 0x9d, 0xdf, 0xf3, 0xb4, 0x4c, 0xd3, 0x6f,
+	0x05, 0xe0, 0x4e, 0x80, 0xc5, 0x08, 0x34, 0x62, 0x04, 0x32, 0xd7, 0x23, 0xd0, 0xb8, 0x84, 0x40,
+	0xe3, 0x3c, 0x02, 0x8d, 0x88, 0xc0, 0x36, 0x58, 0x3e, 0x64, 0x17, 0x1c, 0xe8, 0x61, 0x25, 0xcb,
+	0x1c, 0x58, 0x4e, 0x38, 0x30, 0xe1, 0x04, 0xbd, 0x78, 0x18, 0x9f, 0x62, 0xf9, 0x97, 0x12, 0x58,
+	0xc2, 0x47, 0xa6, 0x0f, 0xb1, 0x61, 0x63, 0x3c, 0x82, 0x96, 0x92, 0x63, 0x36, 0xd6, 0x6b, 0xa2,
+	0x94, 0xd0, 0x82, 0x54, 0x13, 0x05, 0xa9, 0xb6, 0x8d, 0x6c, 0xaf, 0xf9, 0x03, 0x71, 0xb8, 0x7b,
+	0x03, 0x9b, 0x1c, 0x8d, 0x7a, 0xb5, 0x3e, 0x72, 0x45, 0xdd, 0x11, 0x7f, 0x1e, 0x60, 0xeb, 0xb8,
+	0x4e, 0x4e, 0x87, 0x10, 0xb3, 0x05, 0x5f, 0x4d, 0xd4, 0xe4, 0x16, 0x67, 0x13, 0x75, 0x95, 0x9f,
+	0x34, 0x01, 0x6b, 0xfa, 0x22, 0x9f, 0xb7, 0xf8, 0xf4, 0x8f, 0x19, 0xb0, 0xd4, 0xc1, 0x83, 0xef,
+	0xdb, 0xe4, 0xc8, 0xf2, 0xcd, 0xa7, 0xa6, 0xf3, 0x5f, 0x2b, 0x07, 0x27, 0xa0, 0x24, 0x98, 0x11,
+	0x64, 0xf8, 0xd0, 0x45, 0x27, 0x50, 0x54, 0x85, 0xf6, 0x55, 0x8e, 0x9d, 0x5a, 0x78, 0x36, 0x51,
+	0xd7, 0x12, 0x87, 0x0d, 0x25, 0x9a, 0x5e, 0xe4, 0x50, 0x17, 0xe9, 0x0c, 0xb8, 0x28, 0x99, 0xe7,
+	0x2e, 0x4f, 0xe6, 0xf9, 0x28, 0x99, 0x37, 0xb5, 0x74, 0x56, 0xde, 0x12, 0x59, 0x19, 0xdd, 0xa2,
+	0xf6, 0x45, 0x16, 0xdc, 0x4e, 0x20, 0xe7, 0xe6, 0xd4, 0x53, 0x21, 0xf6, 0xf8, 0x55, 0x5f, 0x27,
+	0xa7, 0xc2, 0xa5, 0xe7, 0xe4, 0x54, 0x28, 0x8b, 0xe5, 0x54, 0xc0, 0xc4, 0x4b, 0xe4, 0x54, 0x44,
+	0x20, 0x73, 0x3d, 0x02, 0x8d, 0x4b, 0x08, 0x34, 0xce, 0x23, 0xd0, 0x88, 0x08, 0xc4, 0xd2, 0xa1,
+	0x37, 0xf2, 0x3d, 0x68, 0x89, 0x94, 0x7a, 0x33, 0xe9, 0xc0, 0xb7, 0x98, 0x4a, 0x07, 0x0e, 0x87,
+	0xe9, 0xd0, 0xe4, 0xd3, 0xdf, 0xcf, 0xb2, 0x3a, 0x78, 0xe0, 0x98, 0x7d, 0xd8, 0xb6, 0x5d, 0x9b,
+	0xec, 0xfb, 0x16, 0xf4, 0xbf, 0x66, 0x4e, 0xac, 0x83, 0x3c, 0x0f, 0x7d, 0xdb, 0x13, 0x49, 0xc1,
+	0x53, 0xa1, 0xe5, 0xc9, 0x77, 0x40, 0x81, 0x8b, 0xd0, 0x88, 0x88, 0xbc, 0xe0, 0xba, 0xfb, 0x23,
+	0x22, 0x3f, 0x02, 0xab, 0x51, 0x84, 0x1a, 0xb6, 0x47, 0x03, 0x94, 0xea, 0xcd, 0x56, 0xa4, 0x6a,
+	0xb6, 0x99, 0x51, 0x24, 0xbd, 0x14, 0x86, 0x69, 0xcb, 0xeb, 0x22, 0xba, 0x26, 0xec, 0x7f, 0x74,
+	0xb3, 0x79, 0xe6, 0xcb, 0xd7, 0xed, 0x7f, 0x86, 0xed, 0xa5, 0xfb, 0x9f, 0x61, 0x7b, 0x61, 0xff,
+	0x6b, 0x79, 0xf2, 0x26, 0x00, 0x88, 0xde, 0x83, 0x41, 0x2f, 0x58, 0xc9, 0x57, 0xa4, 0x6a, 0x31,
+	0xd5, 0xc0, 0xa2, 0xbb, 0xea, 0x9e, 0x0e, 0xa1, 0x5e, 0x40, 0xc1, 0x50, 0xee, 0x80, 0x65, 0x38,
+	0x1e, 0xda, 0xbe, 0x49, 0x3b, 0x9a, 0x41, 0x9f, 0x41, 0x4a, 0xa1, 0x22, 0xb1, 0x02, 0xca, 0xdf,
+	0x48, 0xb5, 0xe0, 0x8d, 0x54, 0xeb, 0x06, 0x6f, 0xa4, 0x66, 0xfe, 0xf9, 0x44, 0x95, 0x3e, 0xff,
+	0xab, 0x2a, 0xe9, 0xc5, 0x68, 0x31, 0x15, 0xcb, 0x1e, 0x28, 0xba, 0xe6, 0xd8, 0x10, 0x34, 0xe9,
+	0xad, 0x00, 0x76, 0xd8, 0x0f, 0xe8, 0x8a, 0xcb, 0x0e, 0x9b, 0x5a, 0x76, 0x36, 0x51, 0x6f, 0xf3,
+	0x13, 0x27, 0x71, 0x4d, 0x5f, 0x74, 0xcd, 0xf1, 0x16, 0x9b, 0xd3, 0x7b, 0xfd, 0xb9, 0x04, 0x4a,
+	0x0e, 0x3d, 0x9c, 0x81, 0xa1, 0xe3, 0x18, 0x43, 0xdf, 0xee, 0x43, 0x65, 0x81, 0x6d, 0x79, 0x2c,
+	0xb6, 0x7c, 0x37, 0x16, 0x93, 0xe2, 0x4e, 0x1e, 0x20, 0x7f, 0x10, 0x8c, 0xeb, 0x27, 0xef, 0xd6,
+	0x47, 0xc4, 0x76, 0x30, 0x67, 0x73, 0xe0, 0xc3, 0xfe, 0x0e, 0xec, 0xd3, 0x2a, 0x96, 0xb6, 0x1b,
+	0x55, 0xb1, 0xb4, 0x44, 0xd3, 0x8b, 0x0c, 0x7a, 0x02, 0x1d, 0xe7, 0x80, 0x02, 0x9b, 0xf7, 0xd2,
+	0x35, 0xe8, 0x2d, 0x51, 0x83, 0x52, 0xa1, 0xab, 0xfd, 0x33, 0x0b, 0xca, 0xd3, 0x70, 0x58, 0x8d,
+	0x36, 0x00, 0x20, 0xbe, 0xe9, 0xf5, 0x8f, 0xe0, 0x87, 0xf0, 0x54, 0x04, 0x77, 0x0c, 0x91, 0x3f,
+	0x95, 0xc0, 0x3c, 0x7d, 0x21, 0xd3, 0xb0, 0xca, 0x30, 0xbf, 0x5d, 0x92, 0xa5, 0xed, 0xeb, 0x67,
+	0x69, 0x60, 0xfc, 0x6c, 0xa2, 0x16, 0xf9, 0xd9, 0x05, 0xa0, 0xe9, 0x73, 0x74, 0xd4, 0xf2, 0xe4,
+	0x5f, 0x49, 0xa0, 0x48, 0xcc, 0x63, 0xe8, 0x1b, 0x4c, 0x44, 0x7d, 0x9e, 0xbd, 0x8a, 0xc9, 0xc7,
+	0xd7, 0x67, 0x92, 0xda, 0x23, 0x0a, 0x90, 0x24, 0xae, 0xe9, 0x8b, 0x0c, 0xa0, 0xab, 0x68, 0x80,
+	0xfc, 0x42, 0x02, 0x4b, 0x31, 0x0d, 0xdb, 0x63, 0xe9, 0x7c, 0xe3, 0xc5, 0x2c, 0xb1, 0x45, 0x54,
+	0xcc, 0x12, 0xb0, 0xa6, 0x2f, 0x84, 0xd4, 0x5a, 0x9e, 0xf6, 0x99, 0x04, 0xee, 0xc4, 0x5a, 0xd0,
+	0x9e, 0xed, 0x38, 0xd0, 0x7a, 0xad, 0xa2, 0xa6, 0x82, 0x05, 0x11, 0x02, 0xc6, 0x31, 0x3c, 0x15,
+	0x75, 0x2d, 0x16, 0x15, 0x9b, 0x0f, 0xd3, 0xd1, 0xa7, 0xa6, 0x3a, 0x60, 0x7a, 0x33, 0xed, 0xef,
+	0x19, 0x70, 0xf7, 0x12, 0x79, 0x18, 0x8f, 0xe7, 0x38, 0x5b, 0xfa, 0xdf, 0x71, 0x36, 0x65, 0xe7,
+	0x26, 0xd9, 0x65, 0xde, 0x04, 0x3b, 0xf7, 0x02, 0x76, 0x6e, 0x9a, 0x9d, 0x1b, 0x63, 0xa7, 0xfd,
+	0x18, 0xac, 0x74, 0xf0, 0x60, 0xdb, 0xf4, 0xfa, 0xd0, 0xb9, 0x19, 0x3f, 0x57, 0xd3, 0x7e, 0x5e,
+	0x13, 0x7e, 0x4e, 0x6f, 0xa2, 0xfd, 0x39, 0xc3, 0x82, 0x2d, 0x8d, 0xff, 0xdf, 0xaf, 0x37, 0xe0,
+	0xd7, 0xbb, 0x60, 0xa9, 0x33, 0x72, 0x88, 0xfd, 0x01, 0x1a, 0xea, 0x68, 0x44, 0x20, 0x7d, 0x94,
+	0x1e, 0xa1, 0x21, 0xe6, 0x3f, 0xc4, 0x74, 0x36, 0xd6, 0x7e, 0x9b, 0x05, 0xcb, 0x1d, 0x3c, 0x08,
+	0x14, 0x9f, 0x3c, 0x35, 0x87, 0x5f, 0xf3, 0xd9, 0xf2, 0x08, 0xcc, 0xf9, 0x74, 0x9b, 0xf3, 0x7f,
+	0xe9, 0x24, 0x98, 0xe8, 0x42, 0x33, 0xf9, 0xfc, 0xc8, 0xdd, 0xf0, 0xf3, 0x83, 0xf6, 0x60, 0x38,
+	0xb6, 0x89, 0xc1, 0xdb, 0x22, 0xef, 0xc1, 0xb3, 0x61, 0x0f, 0x9e, 0xf9, 0x4f, 0x7a, 0x70, 0xda,
+	0x6e, 0xd4, 0x83, 0xd3, 0x12, 0x8d, 0xbe, 0x45, 0x6c, 0xc2, 0x62, 0x9b, 0xf5, 0x60, 0xf9, 0x1d,
+	0xb0, 0x3c, 0xa4, 0xef, 0xb4, 0x1e, 0xc4, 0xc4, 0x60, 0x17, 0xa1, 0xcc, 0xb1, 0xaf, 0x2d, 0x4b,
+	0x14, 0x6e, 0x42, 0x4c, 0xd8, 0x25, 0x6d, 0xbe, 0x9d, 0xce, 0xa2, 0x15, 0x91, 0x45, 0x71, 0x67,
+	0x69, 0xbf, 0xcb, 0x80, 0xb5, 0x14, 0x16, 0x66, 0xcf, 0xcf, 0x24, 0x90, 0x7f, 0xfd, 0xbc, 0x79,
+	0x7c, 0xfd, 0xc8, 0xcc, 0xc7, 0x62, 0x72, 0x39, 0xd6, 0x87, 0x59, 0x34, 0xb2, 0x1e, 0x4d, 0xd3,
+	0xe4, 0x21, 0x98, 0xe5, 0xc7, 0xcc, 0x88, 0x17, 0xdc, 0xc5, 0x81, 0xc1, 0x15, 0xe5, 0x11, 0xc8,
+	0x59, 0x23, 0x4c, 0xae, 0x7e, 0xe0, 0xef, 0x5d, 0x9f, 0x33, 0xb3, 0x7c, 0x36, 0x51, 0x17, 0x38,
+	0x5f, 0x3a, 0xd3, 0x74, 0x06, 0x6a, 0xbf, 0x91, 0x58, 0x32, 0x7c, 0x34, 0xb4, 0x4c, 0x02, 0x0f,
+	0xd8, 0xd7, 0x35, 0xf9, 0x3d, 0x50, 0x30, 0x47, 0xe4, 0x08, 0xf9, 0x36, 0x11, 0x0f, 0x9d, 0xa6,
+	0xf2, 0x87, 0x2f, 0x1e, 0xac, 0x0a, 0x4a, 0x5b, 0x96, 0xe5, 0x43, 0x8c, 0x9f, 0x10, 0xdf, 0xf6,
+	0x06, 0x7a, 0xa4, 0x2a, 0xbf, 0x07, 0xe6, 0xf8, 0xf7, 0x39, 0x71, 0xea, 0x95, 0xc4, 0xa9, 0xb9,
+	0xf1, 0x66, 0x81, 0xd2, 0xff, 0xf5, 0xab, 0x67, 0xf7, 0x25, 0x5d, 0x68, 0x6f, 0xbe, 0x43, 0xbd,
+	0x1e, 0xd9, 0x89, 0xfb, 0x3d, 0xce, 0x4b, 0x5b, 0x67, 0x6e, 0x8f, 0x43, 0x81, 0xdb, 0xef, 0x8f,
+	0x41, 0x31, 0xf9, 0xb0, 0x96, 0xdf, 0x02, 0xf2, 0xfb, 0xfb, 0xfb, 0x3b, 0x46, 0xb7, 0xd5, 0x36,
+	0xb6, 0xb7, 0x1e, 0x6f, 0xef, 0xb6, 0xdb, 0xbb, 0x3b, 0xa5, 0x19, 0xb9, 0x04, 0x16, 0xf7, 0x5a,
+	0xed, 0xb6, 0xb1, 0xaf, 0x1b, 0x1f, 0xb6, 0xda, 0xed, 0x92, 0x24, 0xaf, 0x81, 0x95, 0x56, 0xa7,
+	0xb3, 0xbb, 0xd3, 0xda, 0xea, 0xee, 0x52, 0x98, 0x6b, 0x97, 0x32, 0x54, 0xf5, 0x7b, 0x1f, 0x3d,
+	0xe9, 0x1a, 0xad, 0xc7, 0x46, 0xb7, 0xd5, 0xd9, 0x2d, 0x65, 0xe5, 0x5b, 0x60, 0x29, 0x34, 0xca,
+	0xa0, 0xdc, 0xa3, 0x7f, 0xe5, 0x40, 0xb6, 0x83, 0x07, 0xf2, 0x36, 0x98, 0x0f, 0xbe, 0x2c, 0xad,
+	0x25, 0xbd, 0x1d, 0x7e, 0x2c, 0x2a, 0xab, 0x17, 0x08, 0xc2, 0xe8, 0x6d, 0x03, 0x10, 0xfb, 0xbe,
+	0x50, 0x4e, 0xab, 0x47, 0xb2, 0xb2, 0x76, 0xb1, 0x2c, 0xb4, 0xf6, 0x09, 0x58, 0x4e, 0xff, 0x3c,
+	0x9b, 0x62, 0x90, 0x52, 0x28, 0xdf, 0xbb, 0x42, 0x21, 0x34, 0x7e, 0x02, 0x94, 0x0b, 0xdf, 0x4b,
+	0xd5, 0x8b, 0xc8, 0xa5, 0x35, 0xcb, 0x0f, 0x5f, 0x57, 0x33, 0xdc, 0xf7, 0x87, 0xa0, 0x34, 0xd5,
+	0xb7, 0x2b, 0x69, 0x2b, 0x69, 0x8d, 0x72, 0xf5, 0x2a, 0x8d, 0xd0, 0xbe, 0x0e, 0x16, 0x13, 0x9d,
+	0xe1, 0x1b, 0xe9, 0x95, 0x71, 0x69, 0xf9, 0xed, 0xcb, 0xa4, 0x71, 0x9b, 0x89, 0x04, 0x9b, 0xb2,
+	0x19, 0x97, 0x4e, 0xdb, 0x3c, 0x2f, 0xe2, 0xcb, 0xb3, 0x9f, 0xd2, 0x1c, 0x6a, 0xbe, 0xff, 0xfc,
+	0xc5, 0x86, 0xf4, 0xe5, 0x8b, 0x0d, 0xe9, 0x6f, 0x2f, 0x36, 0xa4, 0xcf, 0x5f, 0x6e, 0xcc, 0x7c,
+	0xf9, 0x72, 0x63, 0xe6, 0x4f, 0x2f, 0x37, 0x66, 0x3e, 0x7e, 0x70, 0x75, 0xa1, 0x1f, 0xf3, 0xff,
+	0x14, 0xa0, 0xa5, 0xa2, 0x37, 0xc7, 0x7e, 0x5c, 0x7e, 0xfb, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff,
+	0x42, 0x14, 0x76, 0xb2, 0x30, 0x18, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1377,6 +1495,16 @@ func (m *DepositOptions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.FailTxOnBel {
+		i--
+		if m.FailTxOnBel {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
 	if m.DisableAutoswap {
 		i--
 		if m.DisableAutoswap {
@@ -1520,6 +1648,41 @@ func (m *MsgDeposit) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *FailedDeposit) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FailedDeposit) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FailedDeposit) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Error) > 0 {
+		i -= len(m.Error)
+		copy(dAtA[i:], m.Error)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Error)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.DepositIdx != 0 {
+		i = encodeVarintTx(dAtA, i, uint64(m.DepositIdx))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *MsgDepositResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1540,6 +1703,34 @@ func (m *MsgDepositResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.SharesIssued) > 0 {
+		for iNdEx := len(m.SharesIssued) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size := m.SharesIssued[iNdEx].Size()
+				i -= size
+				if _, err := m.SharesIssued[iNdEx].MarshalTo(dAtA[i:]); err != nil {
+					return 0, err
+				}
+				i = encodeVarintTx(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if len(m.FailedDeposits) > 0 {
+		for iNdEx := len(m.FailedDeposits) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.FailedDeposits[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintTx(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
 	if len(m.Reserve1Deposited) > 0 {
 		for iNdEx := len(m.Reserve1Deposited) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -1693,6 +1884,40 @@ func (m *MsgWithdrawalResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.SharesBurned) > 0 {
+		for iNdEx := len(m.SharesBurned) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size := m.SharesBurned[iNdEx].Size()
+				i -= size
+				if _, err := m.SharesBurned[iNdEx].MarshalTo(dAtA[i:]); err != nil {
+					return 0, err
+				}
+				i = encodeVarintTx(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	{
+		size := m.Reserve1Withdrawn.Size()
+		i -= size
+		if _, err := m.Reserve1Withdrawn.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintTx(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	{
+		size := m.Reserve0Withdrawn.Size()
+		i -= size
+		if _, err := m.Reserve0Withdrawn.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintTx(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
 }
 
@@ -1716,6 +1941,18 @@ func (m *MsgPlaceLimitOrder) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.LimitSellPrice != nil {
+		{
+			size := m.LimitSellPrice.Size()
+			i -= size
+			if _, err := m.LimitSellPrice.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+			i = encodeVarintTx(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x5a
+	}
 	if m.MaxAmountOut != nil {
 		{
 			size := m.MaxAmountOut.Size()
@@ -1810,6 +2047,16 @@ func (m *MsgPlaceLimitOrderResponse) MarshalToSizedBuffer(dAtA []byte) (int, err
 	var l int
 	_ = l
 	{
+		size := m.TakerCoinIn.Size()
+		i -= size
+		if _, err := m.TakerCoinIn.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintTx(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x22
+	{
 		size := m.TakerCoinOut.Size()
 		i -= size
 		if _, err := m.TakerCoinOut.MarshalTo(dAtA[i:]); err != nil {
@@ -1896,6 +2143,26 @@ func (m *MsgWithdrawFilledLimitOrderResponse) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	{
+		size := m.MakerCoinOut.Size()
+		i -= size
+		if _, err := m.MakerCoinOut.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintTx(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	{
+		size := m.TakerCoinOut.Size()
+		i -= size
+		if _, err := m.TakerCoinOut.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintTx(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
 }
 
@@ -1956,6 +2223,26 @@ func (m *MsgCancelLimitOrderResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
+	{
+		size := m.MakerCoinOut.Size()
+		i -= size
+		if _, err := m.MakerCoinOut.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintTx(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	{
+		size := m.TakerCoinOut.Size()
+		i -= size
+		if _, err := m.TakerCoinOut.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintTx(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
 }
 
@@ -2092,6 +2379,32 @@ func (m *MsgMultiHopSwapResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if len(m.Dust) > 0 {
+		for iNdEx := len(m.Dust) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size := m.Dust[iNdEx].Size()
+				i -= size
+				if _, err := m.Dust[iNdEx].MarshalTo(dAtA[i:]); err != nil {
+					return 0, err
+				}
+				i = encodeVarintTx(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if m.Route != nil {
+		{
+			size, err := m.Route.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintTx(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
 	{
 		size := m.CoinOut.Size()
 		i -= size
@@ -2188,6 +2501,9 @@ func (m *DepositOptions) Size() (n int) {
 	if m.DisableAutoswap {
 		n += 2
 	}
+	if m.FailTxOnBel {
+		n += 2
+	}
 	return n
 }
 
@@ -2248,6 +2564,22 @@ func (m *MsgDeposit) Size() (n int) {
 	return n
 }
 
+func (m *FailedDeposit) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.DepositIdx != 0 {
+		n += 1 + sovTx(uint64(m.DepositIdx))
+	}
+	l = len(m.Error)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
 func (m *MsgDepositResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -2262,6 +2594,18 @@ func (m *MsgDepositResponse) Size() (n int) {
 	}
 	if len(m.Reserve1Deposited) > 0 {
 		for _, e := range m.Reserve1Deposited {
+			l = e.Size()
+			n += 1 + l + sovTx(uint64(l))
+		}
+	}
+	if len(m.FailedDeposits) > 0 {
+		for _, e := range m.FailedDeposits {
+			l = e.Size()
+			n += 1 + l + sovTx(uint64(l))
+		}
+	}
+	if len(m.SharesIssued) > 0 {
+		for _, e := range m.SharesIssued {
 			l = e.Size()
 			n += 1 + l + sovTx(uint64(l))
 		}
@@ -2320,6 +2664,16 @@ func (m *MsgWithdrawalResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = m.Reserve0Withdrawn.Size()
+	n += 1 + l + sovTx(uint64(l))
+	l = m.Reserve1Withdrawn.Size()
+	n += 1 + l + sovTx(uint64(l))
+	if len(m.SharesBurned) > 0 {
+		for _, e := range m.SharesBurned {
+			l = e.Size()
+			n += 1 + l + sovTx(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -2361,6 +2715,10 @@ func (m *MsgPlaceLimitOrder) Size() (n int) {
 		l = m.MaxAmountOut.Size()
 		n += 1 + l + sovTx(uint64(l))
 	}
+	if m.LimitSellPrice != nil {
+		l = m.LimitSellPrice.Size()
+		n += 1 + l + sovTx(uint64(l))
+	}
 	return n
 }
 
@@ -2377,6 +2735,8 @@ func (m *MsgPlaceLimitOrderResponse) Size() (n int) {
 	l = m.CoinIn.Size()
 	n += 1 + l + sovTx(uint64(l))
 	l = m.TakerCoinOut.Size()
+	n += 1 + l + sovTx(uint64(l))
+	l = m.TakerCoinIn.Size()
 	n += 1 + l + sovTx(uint64(l))
 	return n
 }
@@ -2404,6 +2764,10 @@ func (m *MsgWithdrawFilledLimitOrderResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = m.TakerCoinOut.Size()
+	n += 1 + l + sovTx(uint64(l))
+	l = m.MakerCoinOut.Size()
+	n += 1 + l + sovTx(uint64(l))
 	return n
 }
 
@@ -2430,6 +2794,10 @@ func (m *MsgCancelLimitOrderResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = m.TakerCoinOut.Size()
+	n += 1 + l + sovTx(uint64(l))
+	l = m.MakerCoinOut.Size()
+	n += 1 + l + sovTx(uint64(l))
 	return n
 }
 
@@ -2486,6 +2854,16 @@ func (m *MsgMultiHopSwapResponse) Size() (n int) {
 	_ = l
 	l = m.CoinOut.Size()
 	n += 1 + l + sovTx(uint64(l))
+	if m.Route != nil {
+		l = m.Route.Size()
+		n += 1 + l + sovTx(uint64(l))
+	}
+	if len(m.Dust) > 0 {
+		for _, e := range m.Dust {
+			l = e.Size()
+			n += 1 + l + sovTx(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -2568,6 +2946,26 @@ func (m *DepositOptions) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.DisableAutoswap = bool(v != 0)
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FailTxOnBel", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.FailTxOnBel = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])
@@ -2776,7 +3174,7 @@ func (m *MsgDeposit) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_cosmos_cosmos_sdk_types.Int
+			var v cosmossdk_io_math.Int
 			m.AmountsA = append(m.AmountsA, v)
 			if err := m.AmountsA[len(m.AmountsA)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2812,7 +3210,7 @@ func (m *MsgDeposit) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_cosmos_cosmos_sdk_types.Int
+			var v cosmossdk_io_math.Int
 			m.AmountsB = append(m.AmountsB, v)
 			if err := m.AmountsB[len(m.AmountsB)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3025,6 +3423,107 @@ func (m *MsgDeposit) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *FailedDeposit) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FailedDeposit: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FailedDeposit: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DepositIdx", wireType)
+			}
+			m.DepositIdx = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.DepositIdx |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Error = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *MsgDepositResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -3084,7 +3583,7 @@ func (m *MsgDepositResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_cosmos_cosmos_sdk_types.Int
+			var v cosmossdk_io_math.Int
 			m.Reserve0Deposited = append(m.Reserve0Deposited, v)
 			if err := m.Reserve0Deposited[len(m.Reserve0Deposited)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3120,9 +3619,77 @@ func (m *MsgDepositResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_cosmos_cosmos_sdk_types.Int
+			var v cosmossdk_io_math.Int
 			m.Reserve1Deposited = append(m.Reserve1Deposited, v)
 			if err := m.Reserve1Deposited[len(m.Reserve1Deposited)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FailedDeposits", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.FailedDeposits = append(m.FailedDeposits, &FailedDeposit{})
+			if err := m.FailedDeposits[len(m.FailedDeposits)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SharesIssued", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SharesIssued = append(m.SharesIssued, github_com_cosmos_cosmos_sdk_types.Coin{})
+			if err := m.SharesIssued[len(m.SharesIssued)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -3334,7 +3901,7 @@ func (m *MsgWithdrawal) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_cosmos_cosmos_sdk_types.Int
+			var v cosmossdk_io_math.Int
 			m.SharesToRemove = append(m.SharesToRemove, v)
 			if err := m.SharesToRemove[len(m.SharesToRemove)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3542,6 +4109,108 @@ func (m *MsgWithdrawalResponse) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: MsgWithdrawalResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reserve0Withdrawn", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Reserve0Withdrawn.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reserve1Withdrawn", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Reserve1Withdrawn.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SharesBurned", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SharesBurned = append(m.SharesBurned, github_com_cosmos_cosmos_sdk_types.Coin{})
+			if err := m.SharesBurned[len(m.SharesBurned)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])
@@ -3858,9 +4527,45 @@ func (m *MsgPlaceLimitOrder) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_cosmos_cosmos_sdk_types.Int
+			var v cosmossdk_io_math.Int
 			m.MaxAmountOut = &v
 			if err := m.MaxAmountOut.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 11:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LimitSellPrice", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			var v github_com_neutron_org_neutron_v4_utils_math.PrecDec
+			m.LimitSellPrice = &v
+			if err := m.LimitSellPrice.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -4009,6 +4714,39 @@ func (m *MsgPlaceLimitOrderResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if err := m.TakerCoinOut.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TakerCoinIn", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.TakerCoinIn.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -4176,6 +4914,72 @@ func (m *MsgWithdrawFilledLimitOrderResponse) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: MsgWithdrawFilledLimitOrderResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TakerCoinOut", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.TakerCoinOut.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MakerCoinOut", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.MakerCoinOut.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])
@@ -4340,6 +5144,72 @@ func (m *MsgCancelLimitOrderResponse) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: MsgCancelLimitOrderResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TakerCoinOut", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.TakerCoinOut.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MakerCoinOut", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.MakerCoinOut.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])
@@ -4738,6 +5608,76 @@ func (m *MsgMultiHopSwapResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if err := m.CoinOut.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Route", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Route == nil {
+				m.Route = &MultiHopRoute{}
+			}
+			if err := m.Route.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Dust", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Dust = append(m.Dust, github_com_cosmos_cosmos_sdk_types.Coin{})
+			if err := m.Dust[len(m.Dust)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

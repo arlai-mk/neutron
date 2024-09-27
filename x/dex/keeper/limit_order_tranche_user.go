@@ -2,10 +2,11 @@ package keeper
 
 import (
 	"cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v3/x/dex/types"
+	"github.com/neutron-org/neutron/v4/x/dex/types"
 )
 
 func (k Keeper) GetOrInitLimitOrderTrancheUser(
@@ -24,7 +25,6 @@ func (k Keeper) GetOrInitLimitOrderTrancheUser(
 			Address:               receiver,
 			SharesOwned:           math.ZeroInt(),
 			SharesWithdrawn:       math.ZeroInt(),
-			SharesCancelled:       math.ZeroInt(),
 			TickIndexTakerToMaker: tickIndex,
 			TradePairId:           tradePairID,
 			OrderType:             orderType,
@@ -93,12 +93,13 @@ func (k Keeper) SaveTrancheUser(ctx sdk.Context, trancheUser *types.LimitOrderTr
 	} else {
 		k.SetLimitOrderTrancheUser(ctx, trancheUser)
 	}
+	ctx.EventManager().EmitEvent(types.TrancheUserUpdateEvent(*trancheUser))
 }
 
 // GetAllLimitOrderTrancheUser returns all LimitOrderTrancheUser
 func (k Keeper) GetAllLimitOrderTrancheUser(ctx sdk.Context) (list []*types.LimitOrderTrancheUser) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.LimitOrderTrancheUserKeyPrefix))
-	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
 	defer iterator.Close()
 
@@ -117,7 +118,7 @@ func (k Keeper) GetAllLimitOrderTrancheUserForAddress(
 ) (list []*types.LimitOrderTrancheUser) {
 	addressPrefix := types.LimitOrderTrancheUserAddressPrefix(address.String())
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), addressPrefix)
-	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
 	defer iterator.Close()
 

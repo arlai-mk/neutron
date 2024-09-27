@@ -4,15 +4,11 @@ import (
 	"strings"
 
 	"cosmossdk.io/errors"
-	"github.com/cosmos/ibc-go/v7/modules/core/exported"
+	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-)
-
-const (
-	MaxKVQueryKeysCount = 32
 )
 
 var (
@@ -28,7 +24,7 @@ func (msg MsgSubmitQueryResult) Type() string {
 	return "submit-query-result"
 }
 
-func (msg MsgSubmitQueryResult) ValidateBasic() error {
+func (msg MsgSubmitQueryResult) Validate() error {
 	if msg.Result == nil {
 		return errors.Wrap(ErrEmptyResult, "query result can't be empty")
 	}
@@ -49,15 +45,11 @@ func (msg MsgSubmitQueryResult) ValidateBasic() error {
 		return errors.Wrapf(sdkerrors.ErrInvalidAddress, "failed to parse address: %s", msg.Sender)
 	}
 
-	if strings.TrimSpace(msg.ClientId) == "" {
-		return errors.Wrap(ErrInvalidClientID, "client id cannot be empty")
-	}
-
 	return nil
 }
 
 func (msg MsgSubmitQueryResult) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+	return ModuleCdc.MustMarshalJSON(&msg)
 }
 
 func (msg MsgSubmitQueryResult) GetSigners() []sdk.AccAddress {
@@ -90,7 +82,7 @@ func (msg MsgRegisterInterchainQuery) Type() string {
 	return "register-interchain-query"
 }
 
-func (msg MsgRegisterInterchainQuery) ValidateBasic() error {
+func (msg MsgRegisterInterchainQuery) Validate(params Params) error {
 	if msg.UpdatePeriod == 0 {
 		return errors.Wrap(ErrInvalidUpdatePeriod, "update period can not be equal to zero")
 	}
@@ -115,13 +107,13 @@ func (msg MsgRegisterInterchainQuery) ValidateBasic() error {
 		if len(msg.Keys) == 0 {
 			return errors.Wrap(ErrEmptyKeys, "keys cannot be empty")
 		}
-		if err := validateKeys(msg.GetKeys()); err != nil {
+		if err := validateKeys(msg.GetKeys(), params.MaxKvQueryKeysCount); err != nil {
 			return err
 		}
 	}
 
 	if InterchainQueryType(msg.QueryType).IsTX() {
-		if err := ValidateTransactionsFilter(msg.TransactionsFilter); err != nil {
+		if err := ValidateTransactionsFilter(msg.TransactionsFilter, params.MaxTransactionsFilters); err != nil {
 			return errors.Wrap(ErrInvalidTransactionsFilter, err.Error())
 		}
 	}
@@ -129,7 +121,7 @@ func (msg MsgRegisterInterchainQuery) ValidateBasic() error {
 }
 
 func (msg MsgRegisterInterchainQuery) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+	return ModuleCdc.MustMarshalJSON(&msg)
 }
 
 func (msg MsgRegisterInterchainQuery) GetSigners() []sdk.AccAddress {
@@ -144,7 +136,7 @@ func (msg MsgRegisterInterchainQuery) GetSigners() []sdk.AccAddress {
 
 var _ sdk.Msg = &MsgUpdateInterchainQueryRequest{}
 
-func (msg MsgUpdateInterchainQueryRequest) ValidateBasic() error {
+func (msg MsgUpdateInterchainQueryRequest) Validate(params Params) error {
 	if msg.GetQueryId() == 0 {
 		return errors.Wrap(ErrInvalidQueryID, "query_id cannot be empty or equal to 0")
 	}
@@ -167,13 +159,13 @@ func (msg MsgUpdateInterchainQueryRequest) ValidateBasic() error {
 	}
 
 	if len(newKeys) != 0 {
-		if err := validateKeys(newKeys); err != nil {
+		if err := validateKeys(newKeys, params.MaxKvQueryKeysCount); err != nil {
 			return err
 		}
 	}
 
 	if newTxFilter != "" {
-		if err := ValidateTransactionsFilter(newTxFilter); err != nil {
+		if err := ValidateTransactionsFilter(newTxFilter, params.MaxTransactionsFilters); err != nil {
 			return errors.Wrap(ErrInvalidTransactionsFilter, err.Error())
 		}
 	}
@@ -188,7 +180,7 @@ func (msg MsgUpdateInterchainQueryRequest) ValidateBasic() error {
 }
 
 func (msg MsgUpdateInterchainQueryRequest) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+	return ModuleCdc.MustMarshalJSON(&msg)
 }
 
 func (msg MsgUpdateInterchainQueryRequest) GetSigners() []sdk.AccAddress {
@@ -220,19 +212,19 @@ func (msg *MsgUpdateParams) GetSigners() []sdk.AccAddress {
 }
 
 func (msg *MsgUpdateParams) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return ModuleCdc.MustMarshalJSON(msg)
 }
 
-func (msg *MsgUpdateParams) ValidateBasic() error {
+func (msg *MsgUpdateParams) Validate() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
 		return errors.Wrap(err, "authority is invalid")
 	}
 	return nil
 }
 
-func validateKeys(keys []*KVKey) error {
-	if uint64(len(keys)) > MaxKVQueryKeysCount {
-		return errors.Wrapf(ErrTooManyKVQueryKeys, "keys count cannot be more than %d", MaxKVQueryKeysCount)
+func validateKeys(keys []*KVKey, maxKVQueryKeysCount uint64) error {
+	if uint64(len(keys)) > maxKVQueryKeysCount {
+		return errors.Wrapf(ErrTooManyKVQueryKeys, "keys count cannot be more than %d", maxKVQueryKeysCount)
 	}
 
 	duplicates := make(map[string]struct{})
