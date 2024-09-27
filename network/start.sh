@@ -41,7 +41,6 @@ if [ "$RUN_BACKGROUND" == 1 ]; then
     --home "$CHAIN_DIR"                   \
     --pruning=nothing                     \
     --grpc.address="0.0.0.0:$GRPCPORT"    \
-    --grpc-web.address="0.0.0.0:$GRPCWEB" \
     $SEEDS                                \
     --trace > "$CHAIN_DIR/$CHAINID.log" 2>&1 &
 else
@@ -51,7 +50,6 @@ else
     --home "$CHAIN_DIR"                   \
     --pruning=nothing                     \
     --grpc.address="0.0.0.0:$GRPCPORT"    \
-    --grpc-web.address="0.0.0.0:$GRPCWEB" \
     $SEEDS                                \
     --trace 2>&1 | tee "$CHAIN_DIR/$CHAINID.log"
 fi
