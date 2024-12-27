@@ -260,9 +260,9 @@ start-rly:
 
 kill-dev:
 	@echo "Killing neutrond and removing previous data"
-	-@rm -rf ./data
 	-@killall neutrond 2>/dev/null
 	-@killall gaiad 2>/dev/null
+	-@rm -rf ./data
 
 build-docker-image:
 	# please keep the image name consistent with https://github.com/neutron-org/neutron-integration-tests/blob/main/setup/docker-compose.yml

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+killall neutrond 2>/dev/null
+
 script_full_path=$(dirname "$0")
 
 export BINARY=neutrond
