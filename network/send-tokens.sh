@@ -9,6 +9,7 @@ declare -a cosmos_addresses=(
     "cosmos1903lkw4kxwefee4gax8dmnd2gtez3ljgsr346e" # arlai Alice Ledger
     "cosmos1amfsez6sqk35rpq5589mrqeqdhg04jsx0u9yy7" # arlai Bob Ledger
     "cosmos1hyyftdvt732u5y7z0muvqm0ajxg5k6ws5n3s7l" # arlai Charlie Ledger
+    "cosmos164lr65s6u8equ5elqmnj5s490rvunwc6pv4atl" # Poly
 )
 
 BINARY=gaiad
@@ -70,6 +71,7 @@ declare -a neutron_addresses=(
     "neutron1903lkw4kxwefee4gax8dmnd2gtez3ljg5uchq7" # arlai Alice Ledger
     "neutron1amfsez6sqk35rpq5589mrqeqdhg04jsxtrvx7e" # arlai Bob Ledger
     "neutron1hyyftdvt732u5y7z0muvqm0ajxg5k6wssvcjyc" # arlai Charlie Ledger
+    "neutron164lr65s6u8equ5elqmnj5s490rvunwc69nul3c" # Poly
 )
 
 BINARY=neutrond
