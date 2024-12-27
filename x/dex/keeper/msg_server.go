@@ -8,7 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/neutron-org/neutron/v4/x/dex/types"
+	math_utils "github.com/neutron-org/neutron/v5/utils/math"
+	"github.com/neutron-org/neutron/v5/x/dex/types"
 )
 
 type MsgServer struct {
@@ -136,7 +137,8 @@ func (k MsgServer) PlaceLimitOrder(
 	}
 	tickIndex := msg.TickIndexInToOut
 	if msg.LimitSellPrice != nil {
-		tickIndex, err = types.CalcTickIndexFromPrice(*msg.LimitSellPrice)
+		limitBuyPrice := math_utils.OnePrecDec().Quo(*msg.LimitSellPrice)
+		tickIndex, err = types.CalcTickIndexFromPrice(limitBuyPrice)
 		if err != nil {
 			return &types.MsgPlaceLimitOrderResponse{}, errors.Wrapf(err, "invalid LimitSellPrice %s", msg.LimitSellPrice.String())
 		}
@@ -150,6 +152,7 @@ func (k MsgServer) PlaceLimitOrder(
 		msg.OrderType,
 		msg.ExpirationTime,
 		msg.MaxAmountOut,
+		msg.MinAverageSellPrice,
 		callerAddr,
 		receiverAddr,
 	)

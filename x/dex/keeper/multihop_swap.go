@@ -10,8 +10,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	math_utils "github.com/neutron-org/neutron/v4/utils/math"
-	"github.com/neutron-org/neutron/v4/x/dex/types"
+	math_utils "github.com/neutron-org/neutron/v5/utils/math"
+	"github.com/neutron-org/neutron/v5/x/dex/types"
 )
 
 type MultihopStep struct {
@@ -149,7 +149,7 @@ func (k Keeper) HopsToRouteData(
 		if !found {
 			return routeArr, types.ErrLimitPriceNotSatisfied
 		}
-		priceAcc = priceAcc.Mul(price)
+		priceAcc = priceAcc.Quo(price)
 		routeArr[index] = MultihopStep{
 			tradePairID:        tradePairID,
 			RemainingBestPrice: priceAcc,
@@ -284,7 +284,7 @@ func (k Keeper) SwapFullAmountIn(
 		return sdk.Coin{}, sdk.Coin{}, err
 	}
 	if !orderFilled {
-		return sdk.Coin{}, sdk.Coin{}, types.ErrLimitPriceNotSatisfied
+		return sdk.Coin{}, sdk.Coin{}, types.ErrNoLiquidity
 	}
 
 	dust = sdk.Coin.Sub(sdk.NewCoin(swapAmountTakerDenom.Denom, amountIn), swapAmountTakerDenom)
