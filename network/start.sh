@@ -35,6 +35,7 @@ RUN_BACKGROUND=${RUN_BACKGROUND:-1}
 echo "Starting $CHAINID in $CHAIN_DIR..."
 echo "Creating log file at $CHAIN_DIR/$CHAINID.log"
 if [ "$RUN_BACKGROUND" == 1 ]; then
+  rm "$CHAIN_DIR/$CHAINID.log"
   $BINARY start                           \
     --log_level debug                     \
     --log_format json                     \
