@@ -24,30 +24,17 @@ Follow these steps whenever you want to incorporate upstream changes (e.g., when
    git fetch upstream --tags
    ```
 
-2. Update your main branch with the upstream changes:
-
-   ```bash
-   # Switch to main branch
-   git checkout main
-
-   # If updating to a specific version tag (e.g., v5.0.6)
-   git merge v5.0.6
-
-   # OR if updating to latest main
-   git merge upstream/main
-   ```
-
-3. Merge the changes into your feature branch:
+2. Update your feature branch with the upstream changes:
 
    ```bash
    # Switch to your feature branch
    git checkout multiple_vals
 
-   # Merge the updated main branch
-   git merge main
+   # If updating to a specific version tag (e.g., v6.0.1)
+   git merge v6.0.1
    ```
 
-4. Resolve any merge conflicts if they appear:
+3. Resolve any merge conflicts if they appear:
 
    - Open each conflicted file and resolve the conflicts
    - Look for sections marked with `<<<<<<`, `=======`, and `>>>>>>>`
@@ -60,18 +47,18 @@ Follow these steps whenever you want to incorporate upstream changes (e.g., when
      git merge --continue
      ```
 
-5. Create a new tag for your custom version (optional):
+4. Create a new tag for your custom version (optional):
 
    ```bash
-   # If upstream released v5.0.6, you might want to create v5.0.6-mk
-   git tag v5.0.6-mk
+   # If upstream released v6.0.1, you might want to create v6.0.1-mk
+   git tag v6.0.1-mk
    ```
 
-6. Push your changes:
+5. Push your changes:
 
    ```bash
    # Push your new tag
-   git push origin v5.0.6-mk
+   git push origin v6.0.1-mk
 
    # Push your updated branch
    git push origin multiple_vals
@@ -101,7 +88,7 @@ If something goes wrong during the merge process:
 
 - Always make sure your working directory is clean before starting the upgrade process
 - Consider creating a backup branch before major upgrades
-- Keep track of which upstream versions you've merged with by maintaining a consistent tag naming scheme (e.g., `v5.0.6-mk`)
+- Keep track of which upstream versions you've merged with by maintaining a consistent tag naming scheme (e.g., `v6.0.1-mk`)
 - If you encounter persistent issues, you can always check your branch's merge base with:
   ```bash
   git merge-base multiple_vals main
