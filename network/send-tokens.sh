@@ -72,7 +72,6 @@ declare -a neutron_addresses=(
     "neutron1amfsez6sqk35rpq5589mrqeqdhg04jsxtrvx7e" # arlai Bob Ledger
     "neutron1hyyftdvt732u5y7z0muvqm0ajxg5k6wssvcjyc" # arlai Charlie Ledger
     "neutron164lr65s6u8equ5elqmnj5s490rvunwc69nul3c" # Poly
-    "neutron1dyqsdjtj7v9q4t95yqxl30zew4t8lrd7ku54z5" # Deployer
 )
 
 BINARY=neutrond

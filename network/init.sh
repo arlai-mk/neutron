@@ -5,8 +5,10 @@ BINARY=${BINARY:-neutrond}
 BASE_DIR=./data
 CHAINID=${CHAINID:-test-1}
 STAKEDENOM=${STAKEDENOM:-untrn}
-IBCATOMDENOM=${IBCATOMDENOM:-uibcatom}
-IBCUSDCDENOM=${IBCUSDCDENOM:-uibcusdc}
+DATOMDENOM=${DATOMDENOM:-factory/neutron1k6hr0f83e7un2wjf29cspk7j69jrnskk65k3ek2nj9dztrlzpj6q00rtsa/udatom}
+DNTRNDENOM=${DNTRNDENOM:-factory/neutron1frc0p5czd9uaaymdkug2njz7dc7j65jxukp9apmt9260a8egujkspms2t2/udntrn}
+IBCSTATOMDENOM=${IBCSTATOMDENOM:-ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C}
+IBCSTOSMODENOM=${IBCSTOSMODENOM:-ibc/75249A18DEFBEFE55F83B1C70CAD234DF164F174C6BC51682EE92C2C81C18C93}
 CHAIN_DIR="$BASE_DIR/$CHAINID"
 
 P2PPORT=${P2PPORT:-26656}
@@ -27,6 +29,8 @@ DEMO_MNEMONIC_2="veteran try aware erosion drink dance decade comic dawn museum 
 DEMO_MNEMONIC_3="obscure canal because tomorrow tribe sibling describe satoshi kiwi upgrade bless empty math trend erosion oblige donate label birth chronic hazard ensure wreck shine"
 RLY_MNEMONIC_1="alley afraid soup fall idea toss can goose become valve initial strong forward bright dish figure check leopard decide warfare hub unusual join cart"
 RLY_MNEMONIC_2="record gift you once hip style during joke field prize dust unique length more pencil transfer quit train device arrive energy sort steak upset"
+
+DEPLOYER_MNEMONIC="appear empty thrive panther spread mandate together possible hawk area delay artefact hockey endorse assist blood grid cheap argue capable diamond bonus abstract quarter"
 
 # Stop if it is already running
 if pgrep -x "$BINARY" >/dev/null; then
@@ -72,9 +76,19 @@ $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show val1 --keyring-
 $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show val2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
 $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show val3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
 $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show val4 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
-$BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
-$BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
-$BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$IBCATOMDENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
+if [[ "$BINARY" == "gaiad" ]]
+then
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
+else
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
+
+    echo "$DEPLOYER_MNEMONIC" | $BINARY keys add deployer --home "$CHAIN_DIR" --recover --keyring-backend=test
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show deployer --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
+fi;
 $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show rly1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
 $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show rly2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
 
