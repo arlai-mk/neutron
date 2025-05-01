@@ -7,6 +7,7 @@ CHAINID=${CHAINID:-neutron-devnet-1}
 GRPCPORT=${GRPCPORT:-9090}
 GRPCWEB=${GRPCWEB:-9091}
 CHAIN_DIR="$BASE_DIR/$CHAINID"
+LOGLEVEL=${LOGLEVEL:-info}
 
 # For Gaia, we have different nodes
 if [ "$BINARY" == "gaiad" ]; then
@@ -33,25 +34,25 @@ fi
 RUN_BACKGROUND=${RUN_BACKGROUND:-1}
 
 echo "Starting $CHAINID in $CHAIN_DIR..."
+[ -f "$CHAIN_DIR/$CHAINID.log" ] && rm "$CHAIN_DIR/$CHAINID.log"
+
 echo "Creating log file at $CHAIN_DIR/$CHAINID.log"
 if [ "$RUN_BACKGROUND" == 1 ]; then
-  rm "$CHAIN_DIR/$CHAINID.log"
-  $BINARY start                           \
-    --log_level debug                     \
-    --log_format json                     \
-    --home "$CHAIN_DIR"                   \
-    --pruning=nothing                     \
-    --grpc.address="0.0.0.0:$GRPCPORT"    \
-    $SEEDS                                \
-    --trace > "$CHAIN_DIR/$CHAINID.log" 2>&1 &
+  $BINARY start \
+    --log_level $LOGLEVEL \
+    --log_format json \
+    --home "$CHAIN_DIR" \
+    --pruning=nothing \
+    --grpc.address="0.0.0.0:$GRPCPORT" \
+    $SEEDS \
+    --trace >"$CHAIN_DIR/$CHAINID.log" 2>&1 &
 else
-  $BINARY start                           \
-    --log_level debug                     \
-    --log_format json                     \
-    --home "$CHAIN_DIR"                   \
-    --pruning=nothing                     \
-    --grpc.address="0.0.0.0:$GRPCPORT"    \
-    $SEEDS                                \
+  $BINARY start \
+    --log_level $LOGLEVEL \
+    --log_format json \
+    --home "$CHAIN_DIR" \
+    --pruning=nothing \
+    --grpc.address="0.0.0.0:$GRPCPORT" \
+    $SEEDS \
     --trace 2>&1 | tee "$CHAIN_DIR/$CHAINID.log"
 fi
-

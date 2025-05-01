@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
-killall gaiad 2>/dev/null
+killall gaiad 2>/dev/null || true
 
 script_full_path=$(dirname "$0")
 
 export BINARY=gaiad
 export CHAINID=cosmoshub-devnet-1
+export LOGLEVEL=info
 
 export NODE=node1
 export GRPCPORT=9090
