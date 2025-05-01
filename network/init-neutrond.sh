@@ -850,3 +850,10 @@ echo "STAKING VAULT" $NEUTRON_STAKING_VAULT_CONTRACT_ADDRESS
 echo "STAKING TRACKER" $NEUTRON_STAKING_TRACKER_CONTRACT_ADDRESS
 echo "STAKING_REWARDS" $NEUTRON_STAKING_REWARDS_CONTRACT_ADDRESS
 echo "STAKING INFO PROXY" $NEUTRON_STAKING_INFO_PROXY_CONTRACT_ADDRESS
+
+set_genesis_param_jq ".app_state.bank.denom_metadata" "[
+  {\"description\":\"The native staking token of the Neutron network\",\"denom_units\":[{\"denom\":\"untrn\",\"aliases\":[\"microntrn\"]},{\"denom\":\"ntrn\",\"exponent\":6,\"aliases\":[\"NTRN\"]}],\"base\":\"untrn\",\"display\":\"ntrn\",\"name\":\"Neutron\",\"symbol\":\"NTRN\"},
+  {\"description\":\"Staked\",\"denom_units\":[{\"denom\":\"factory/neutron1k6hr0f83e7un2wjf29cspk7j69jrnskk65k3ek2nj9dztrlzpj6q00rtsa/udatom\"},{\"denom\":\"udatom\",\"exponent\":6}],\"base\":\"factory/neutron1k6hr0f83e7un2wjf29cspk7j69jrnskk65k3ek2nj9dztrlzpj6q00rtsa/udatom\",\"display\":\"udatom\",\"name\":\"Drop\",\"symbol\":\"dATOM\"},
+  {\"description\":\"Staked\",\"denom_units\":[{\"denom\":\"factory/neutron1frc0p5czd9uaaymdkug2njz7dc7j65jxukp9apmt9260a8egujkspms2t2/udntrn\"},{\"denom\":\"udntrn\",\"exponent\":6}],\"base\":\"factory/neutron1frc0p5czd9uaaymdkug2njz7dc7j65jxukp9apmt9260a8egujkspms2t2/udntrn\",\"display\":\"udntrn\",\"name\":\"Staked\",\"symbol\":\"dNTRN\"},
+  {\"description\":\"IBC token from transfer/channel-8/stuatom\",\"denom_units\":[{\"denom\":\"stuatom\"}],\"base\":\"ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C\",\"display\":\"transfer/channel-8/stuatom\",\"name\":\"transfer/channel-8/stuatom IBC token\",\"symbol\":\"STUATOM\"},
+  {\"description\":\"IBC token from transfer/channel-8/stuosmo\",\"denom_units\":[{\"denom\":\"stuosmo\"}],\"base\":\"ibc/75249A18DEFBEFE55F83B1C70CAD234DF164F174C6BC51682EE92C2C81C18C93\",\"display\":\"transfer/channel-8/stuosmo\",\"name\":\"transfer/channel-8/stuosmo IBC token\",\"symbol\":\"STUOSMO\"}]"
