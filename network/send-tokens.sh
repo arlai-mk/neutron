@@ -37,29 +37,6 @@ do
   sleep 2.5 # otherwise I get some mismatch sequence... (could also just do a multisend, if possible from command line?)
 done
 
-# Do the validator bond for Liquid Staking
-declare -a valoper_addresses=(
-  "cosmosvaloper18hl5c9xn5dze2g50uaw0l2mr02ew57zk0auktn" # Moonkitt (val1)
-  "cosmosvaloper1qnk2n4nlkpw9xfqntladh74w6ujtulwnmxnh3k" # Crosnest (val2)
-  "cosmosvaloper1tdchzcvgmq4dqvar90hjpgh6l6me9x7z832vlr" # High Stakes (val3)
-  "cosmosvaloper1zthtxtyqdgp6ne6lfp0fv9gc7dddlc8qdx4trs" # StakeLab (val4)
-)
-
-ITER=0
-for valoper_address in "${valoper_addresses[@]}"; do 
-  ITER=$(expr $ITER + 1)
-  echo y |
-  $BINARY tx staking validator-bond \
-    "$valoper_address" \
-    --gas-prices 0.1$STAKEDENOM \
-    --gas-adjustment 1.3 \
-    --from "val${ITER}" \
-    --keyring-backend test \
-    --home "$CHAIN_DIR" \
-    --chain-id $CHAINID \
-    --node $HOST
-done
-
 
 #---------------- NEUTRON 
 
@@ -101,3 +78,9 @@ done
 # some commands
 # 1. Unjail
 # gaiad tx slashing unjail --from val2 --keyring-backend=test --home=data/cosmoshub-devnet-1/node2 --node="tcp://localhost:36657" --chain-id="cosmoshub-devnet-1" --gas-adjustment 1.3 --gas-prices 0.1uatom
+
+# neutrond tx bank send demowallet1 neutron164lr65s6u8equ5elqmnj5s490rvunwc69nul3c 1000000000000factory/neutron1k6hr0f83e7un2wjf29cspk7j69jrnskk65k3ek2nj9dztrlzpj6q00rtsa/udatom --gas-prices 0.1untrn --gas-adjustment 1.3 --keyring-backend test --home data/neutron-devnet-1/ --chain-id neutron-devnet-1
+# neutrond tx bank send demowallet1 neutron164lr65s6u8equ5elqmnj5s490rvunwc69nul3c 1000000000000factory/neutron1frc0p5czd9uaaymdkug2njz7dc7j65jxukp9apmt9260a8egujkspms2t2/udntrn --gas-prices 0.1untrn --gas-adjustment 1.3 --keyring-backend test --home data/neutron-devnet-1/ --chain-id neutron-devnet-1
+# neutrond tx bank send demowallet1 neutron164lr65s6u8equ5elqmnj5s490rvunwc69nul3c 1000000000000ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C --gas-prices 0.1untrn --gas-adjustment 1.3 --keyring-backend test --home data/neutron-devnet-1/ --chain-id neutron-devnet-1
+# neutrond tx bank send demowallet1 neutron164lr65s6u8equ5elqmnj5s490rvunwc69nul3c 1000000000000ibc/75249A18DEFBEFE55F83B1C70CAD234DF164F174C6BC51682EE92C2C81C18C93 --gas-prices 0.1untrn --gas-adjustment 1.3 --keyring-backend test --home data/neutron-devnet-1/ --chain-id neutron-devnet-1
+# neutrond tx bank send demowallet1 neutron164lr65s6u8equ5elqmnj5s490rvunwc69nul3c 1000000000000ibc/B559A80D62249C8AA07A380E2A2BEA6E5CA9A6F079C912C3A9E9B494105E4F81 --gas-prices 0.1untrn --gas-adjustment 1.3 --keyring-backend test --home data/neutron-devnet-1/ --chain-id neutron-devnet-1

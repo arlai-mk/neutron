@@ -9,6 +9,7 @@ DATOMDENOM=${DATOMDENOM:-factory/neutron1k6hr0f83e7un2wjf29cspk7j69jrnskk65k3ek2
 DNTRNDENOM=${DNTRNDENOM:-factory/neutron1frc0p5czd9uaaymdkug2njz7dc7j65jxukp9apmt9260a8egujkspms2t2/udntrn}
 IBCSTATOMDENOM=${IBCSTATOMDENOM:-ibc/B7864B03E1B9FD4F049243E92ABD691586F682137037A9F3FCA5222815620B3C}
 IBCSTOSMODENOM=${IBCSTOSMODENOM:-ibc/75249A18DEFBEFE55F83B1C70CAD234DF164F174C6BC51682EE92C2C81C18C93}
+IBCUSDCDENOM=${IBCUSDCDENOM:-ibc/B559A80D62249C8AA07A380E2A2BEA6E5CA9A6F079C912C3A9E9B494105E4F81}
 CHAIN_DIR="$BASE_DIR/$CHAINID"
 
 P2PPORT=${P2PPORT:-26656}
@@ -82,12 +83,12 @@ then
     $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
     $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
 else
-    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
-    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
-    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show demowallet3 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
 
     echo "$DEPLOYER_MNEMONIC" | $BINARY keys add deployer --home "$CHAIN_DIR" --recover --keyring-backend=test
-    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show deployer --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM"  --home "$CHAIN_DIR"
+    $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show deployer --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM,100000000000000$DATOMDENOM,100000000000000$DNTRNDENOM,100000000000000$IBCSTATOMDENOM,100000000000000$IBCSTOSMODENOM,100000000000000$IBCUSDCDENOM"  --home "$CHAIN_DIR"
 fi;
 $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show rly1 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
 $BINARY $GENESIS_PREFIX add-genesis-account "$($BINARY keys show rly2 --keyring-backend test -a --home "$CHAIN_DIR")" "100000000000000$STAKEDENOM"  --home "$CHAIN_DIR"
@@ -125,3 +126,14 @@ sed -i -e 's/enabled-unsafe-cors = false/enabled-unsafe-cors = true/g' "$CHAIN_D
 
 sed -i -e "s/\"fee_denom\": \"stake\",/\"fee_denom\": \"$STAKEDENOM\",/g" "$GENESIS_FILE"
 sed -i -e "s/\"min_base_gas_price\": \"1.000000000000000000\",/\"min_base_gas_price\": \"0.005000000000000000\",/g" "$GENESIS_FILE"
+
+# Add WASM configuration to app.toml
+cat >> "$CHAIN_DIR/config/app.toml" << 'EOF'
+
+###############################################################################
+###                                   WASM                                  ###
+###############################################################################
+[wasm]
+# This is the maximum sdk gas (wasm and storage) that we allow for any x/wasm "smart" queries
+query_gas_limit = 100000000
+EOF
