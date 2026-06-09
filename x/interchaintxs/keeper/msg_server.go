@@ -12,12 +12,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	icacontrollertypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/controller/types"
+	icatypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 
-	feetypes "github.com/neutron-org/neutron/v6/x/feerefunder/types"
-	ictxtypes "github.com/neutron-org/neutron/v6/x/interchaintxs/types"
+	feetypes "github.com/neutron-org/neutron/v11/x/feerefunder/types"
+	ictxtypes "github.com/neutron-org/neutron/v11/x/interchaintxs/types"
 )
 
 type msgServer struct {
@@ -66,7 +66,7 @@ func (k Keeper) RegisterInterchainAccount(goCtx context.Context, msg *ictxtypes.
 		Owner:        icaOwner,
 		ConnectionId: msg.ConnectionId,
 		Version:      "", // FIXME: empty version string doesn't look good
-		// underlying controller uses ORDER_ORDERED as default in case msg's ordering is NONE // TODO: check now
+		// underlying controller uses ORDER_ORDERED as default in case msg's ordering is NONE
 		Ordering: msg.Ordering,
 	})
 	if err != nil {

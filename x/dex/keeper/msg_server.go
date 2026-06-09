@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"cosmossdk.io/errors"
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	math_utils "github.com/neutron-org/neutron/v6/utils/math"
-	"github.com/neutron-org/neutron/v6/x/dex/types"
+	math_utils "github.com/neutron-org/neutron/v11/utils/math"
+	"github.com/neutron-org/neutron/v11/x/dex/types"
 )
 
 type MsgServer struct {
@@ -33,6 +34,10 @@ func (k MsgServer) Deposit(
 	}
 
 	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
+	if err := k.AssertNotWithdrawOnly(goCtx); err != nil {
 		return nil, err
 	}
 
@@ -63,12 +68,20 @@ func (k MsgServer) Deposit(
 	if err != nil {
 		return nil, err
 	}
+	Amounts0DepositInt := make([]math.Int, len(Amounts0Deposit))
+	Amounts1DepositInt := make([]math.Int, len(Amounts1Deposit))
+	for i, amount0 := range Amounts0Deposit {
+		Amounts0DepositInt[i] = amount0.Ceil().TruncateInt()
+		Amounts1DepositInt[i] = Amounts1Deposit[i].Ceil().TruncateInt()
+	}
 
 	return &types.MsgDepositResponse{
-		Reserve0Deposited: Amounts0Deposit,
-		Reserve1Deposited: Amounts1Deposit,
-		FailedDeposits:    failedDeposits,
-		SharesIssued:      sharesIssued,
+		Reserve0Deposited:    Amounts0DepositInt,
+		Reserve1Deposited:    Amounts1DepositInt,
+		DecReserve0Deposited: Amounts0Deposit,
+		DecReserve1Deposited: Amounts1Deposit,
+		FailedDeposits:       failedDeposits,
+		SharesIssued:         sharesIssued,
 	}, nil
 }
 
@@ -108,9 +121,45 @@ func (k MsgServer) Withdrawal(
 	}
 
 	return &types.MsgWithdrawalResponse{
-		Reserve0Withdrawn: reserve0ToRemoved,
-		Reserve1Withdrawn: reserve1ToRemoved,
-		SharesBurned:      sharesBurned,
+		Reserve0Withdrawn:    reserve0ToRemoved.TruncateInt(),
+		Reserve1Withdrawn:    reserve1ToRemoved.TruncateInt(),
+		DecReserve0Withdrawn: reserve0ToRemoved,
+		DecReserve1Withdrawn: reserve1ToRemoved,
+		SharesBurned:         sharesBurned,
+	}, nil
+}
+
+func (k MsgServer) WithdrawalWithShares(
+	goCtx context.Context,
+	msg *types.MsgWithdrawalWithShares,
+) (*types.MsgWithdrawalResponse, error) {
+	if err := msg.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate MsgWithdrawalWithShares")
+	}
+
+	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
+	callerAddr := sdk.MustAccAddressFromBech32(msg.Creator)
+	receiverAddr := sdk.MustAccAddressFromBech32(msg.Receiver)
+
+	reserve0ToRemoved, reserve1ToRemoved, sharesBurned, err := k.WithdrawWithSharesCore(
+		goCtx,
+		callerAddr,
+		receiverAddr,
+		msg.SharesToRemove,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgWithdrawalResponse{
+		Reserve0Withdrawn:    reserve0ToRemoved.TruncateInt(),
+		Reserve1Withdrawn:    reserve1ToRemoved.TruncateInt(),
+		DecReserve0Withdrawn: reserve0ToRemoved,
+		DecReserve1Withdrawn: reserve1ToRemoved,
+		SharesBurned:         sharesBurned,
 	}, nil
 }
 
@@ -123,6 +172,10 @@ func (k MsgServer) PlaceLimitOrder(
 	}
 
 	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
+	if err := k.AssertNotWithdrawOnly(goCtx); err != nil {
 		return nil, err
 	}
 
@@ -161,10 +214,12 @@ func (k MsgServer) PlaceLimitOrder(
 	}
 
 	return &types.MsgPlaceLimitOrderResponse{
-		TrancheKey:   trancheKey,
-		CoinIn:       coinIn,
-		TakerCoinOut: coinOutSwap,
-		TakerCoinIn:  swapInCoin,
+		TrancheKey:      trancheKey,
+		CoinIn:          coinIn.CeilToCoin(),
+		TakerCoinOut:    coinOutSwap.TruncateToCoin(),
+		TakerCoinIn:     swapInCoin.CeilToCoin(),
+		DecTakerCoinOut: coinOutSwap,
+		DecTakerCoinIn:  coinIn,
 	}, nil
 }
 
@@ -192,8 +247,10 @@ func (k MsgServer) WithdrawFilledLimitOrder(
 	}
 
 	return &types.MsgWithdrawFilledLimitOrderResponse{
-		TakerCoinOut: takerCoinOut,
-		MakerCoinOut: makerCoinOut,
+		TakerCoinOut:    takerCoinOut.TruncateToCoin(),
+		MakerCoinOut:    makerCoinOut.TruncateToCoin(),
+		DecTakerCoinOut: takerCoinOut,
+		DecMakerCoinOut: makerCoinOut,
 	}, nil
 }
 
@@ -221,8 +278,10 @@ func (k MsgServer) CancelLimitOrder(
 	}
 
 	return &types.MsgCancelLimitOrderResponse{
-		TakerCoinOut: takerCoinOut,
-		MakerCoinOut: makerCoinOut,
+		TakerCoinOut:    takerCoinOut.TruncateToCoin(),
+		MakerCoinOut:    makerCoinOut.TruncateToCoin(),
+		DecTakerCoinOut: takerCoinOut,
+		DecMakerCoinOut: makerCoinOut,
 	}, nil
 }
 
@@ -235,6 +294,10 @@ func (k MsgServer) MultiHopSwap(
 	}
 
 	if err := k.AssertNotPaused(goCtx); err != nil {
+		return nil, err
+	}
+
+	if err := k.AssertNotWithdrawOnly(goCtx); err != nil {
 		return nil, err
 	}
 
@@ -254,9 +317,11 @@ func (k MsgServer) MultiHopSwap(
 		return &types.MsgMultiHopSwapResponse{}, err
 	}
 	return &types.MsgMultiHopSwapResponse{
-		CoinOut: coinOut,
-		Route:   &types.MultiHopRoute{Hops: route},
-		Dust:    dust,
+		DecCoinOut: coinOut,
+		DecDust:    dust,
+		CoinOut:    coinOut.TruncateToCoin(),
+		Route:      &types.MultiHopRoute{Hops: route},
+		Dust:       dust.TruncateToCoins(),
 	}, nil
 }
 
@@ -284,6 +349,16 @@ func (k MsgServer) AssertNotPaused(goCtx context.Context) error {
 
 	if paused {
 		return types.ErrDexPaused
+	}
+	return nil
+}
+
+func (k MsgServer) AssertNotWithdrawOnly(goCtx context.Context) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	withdrawOnly := k.GetParams(ctx).WithdrawOnly
+
+	if withdrawOnly {
+		return types.ErrDexWithdrawOnly
 	}
 	return nil
 }

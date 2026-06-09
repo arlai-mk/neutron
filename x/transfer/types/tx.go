@@ -3,10 +3,10 @@ package types
 import (
 	"context"
 
-	"github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	"github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"google.golang.org/grpc"
 
-	feerefundertypes "github.com/neutron-org/neutron/v6/x/feerefunder/types"
+	feerefundertypes "github.com/neutron-org/neutron/v11/x/feerefunder/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

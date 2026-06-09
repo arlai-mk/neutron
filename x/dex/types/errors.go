@@ -3,6 +3,8 @@ package types
 // DONTCOVER
 
 import (
+	"fmt"
+
 	sdkerrors "cosmossdk.io/errors"
 )
 
@@ -37,7 +39,7 @@ var (
 	ErrTickOutsideRange = sdkerrors.Register(
 		ModuleName,
 		1117,
-		"abs(tick) + fee must be < 559,680",
+		"abs(tick) + fee must be < 529,715",
 	)
 	ErrInvalidPoolDenom = sdkerrors.Register(
 		ModuleName,
@@ -197,12 +199,12 @@ var (
 	ErrTradeTooSmall = sdkerrors.Register(
 		ModuleName,
 		1159,
-		"Specified trade will result in a rounded output of 0",
+		"Specified trade will result in a output of 0",
 	)
 	ErrPriceOutsideRange = sdkerrors.Register(
 		ModuleName,
 		1160,
-		"Invalid price; 0.00000000000000000000000050 < PRICE > 2020125331305056766451886.728",
+		"Invalid price; 0.000000000000000000000009906 < PRICE > 100943872917137109121294.116592697013542139739189686",
 	)
 	ErrInvalidPriceAndTick = sdkerrors.Register(
 		ModuleName,
@@ -244,9 +246,52 @@ var (
 		1168,
 		"Swap on deposit true price is less than minimum allowed price",
 	)
+	// Error no longer used
 	ErrInvalidSlopTolerance = sdkerrors.Register(
 		ModuleName,
 		1169,
 		"Slop tolerance must be between 0 and 10000",
+	)
+	// Should never be possible to hit this error
+	ErrInsufficientReserves = sdkerrors.Register(
+		ModuleName,
+		1170,
+		"Insufficient reserves for limit order tranche:", // "%s", tranche.TrancheKey
+	)
+	// Should never be possible to hit this error
+	ErrDuplicateTrancheKey = sdkerrors.Register(
+		ModuleName,
+		1171,
+		"Tranche key already exists for different trade pair id or tick index",
+	)
+	ErrDuplicatePoolWithdraw = sdkerrors.Register(
+		ModuleName,
+		1172,
+		"Cannot withdraw from the same pool multiple times", // tickIndex: "%d", fee: "%d"
+	)
+	ErrCanOnlyWithdrawFromSamePair = sdkerrors.Register(
+		ModuleName,
+		1173,
+		"Can only withdraw from the same pair", // poolId: "%d", pairID: "%s"
+	)
+	ErrPoolNotFound = sdkerrors.Register(
+		ModuleName,
+		1174,
+		"Pool not found", // poolId: "%d"
+	)
+	ErrMaxRoutesPerRequestReached = sdkerrors.Register(
+		ModuleName,
+		1175,
+		fmt.Sprintf("A number of routes per request must be less or equal to %d", MaxRoutesPerRequest),
+	)
+	ErrMaxHopsPerRouteReached = sdkerrors.Register(
+		ModuleName,
+		1176,
+		fmt.Sprintf("A number of hops per route must be less or equal to %d", MaxHopsPerRoute),
+	)
+	ErrDexWithdrawOnly = sdkerrors.Register(
+		ModuleName,
+		1177,
+		"Dex is in withdraw only mode, all messages except withdrawals are disabled at this time",
 	)
 )

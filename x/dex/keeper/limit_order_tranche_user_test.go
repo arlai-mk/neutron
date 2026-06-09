@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -8,22 +9,23 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/neutron-org/neutron/v6/testutil/common/nullify"
-	keepertest "github.com/neutron-org/neutron/v6/testutil/dex/keeper"
-	"github.com/neutron-org/neutron/v6/x/dex/keeper"
-	"github.com/neutron-org/neutron/v6/x/dex/types"
+	"github.com/neutron-org/neutron/v11/testutil/common/nullify"
+	keepertest "github.com/neutron-org/neutron/v11/testutil/dex/keeper"
+	math_utils "github.com/neutron-org/neutron/v11/utils/math"
+	"github.com/neutron-org/neutron/v11/x/dex/keeper"
+	"github.com/neutron-org/neutron/v11/x/dex/types"
 )
 
 func createNLimitOrderTrancheUser(keeper *keeper.Keeper, ctx sdk.Context, n int) []*types.LimitOrderTrancheUser {
 	items := make([]*types.LimitOrderTrancheUser, n)
 	for i := range items {
 		val := &types.LimitOrderTrancheUser{
-			TrancheKey:            strconv.Itoa(i),
+			TrancheKey:            fmt.Sprintf("tk-%d", i),
 			Address:               strconv.Itoa(i),
 			TradePairId:           &types.TradePairID{MakerDenom: "TokenA", TakerDenom: "TokenB"},
 			TickIndexTakerToMaker: int64(i),
 			SharesOwned:           math.NewInt(100),
-			SharesWithdrawn:       math.ZeroInt(),
+			DecSharesWithdrawn:    math_utils.ZeroPrecDec(),
 		}
 		items[i] = val
 		keeper.SetLimitOrderTrancheUser(ctx, items[i])
@@ -41,7 +43,7 @@ func createNLimitOrderTrancheUserWithAddress(keeper *keeper.Keeper, ctx sdk.Cont
 			TradePairId:           &types.TradePairID{MakerDenom: "TokenA", TakerDenom: "TokenB"},
 			TickIndexTakerToMaker: 0,
 			SharesOwned:           math.ZeroInt(),
-			SharesWithdrawn:       math.ZeroInt(),
+			DecSharesWithdrawn:    math_utils.ZeroPrecDec(),
 		}
 		items[i] = val
 		keeper.SetLimitOrderTrancheUser(ctx, items[i])
@@ -90,7 +92,8 @@ func (s *DexTestSuite) TestGetAllLimitOrders() {
 		TrancheKey:            trancheKeyA,
 		Address:               s.alice.String(),
 		SharesOwned:           math.NewInt(10_000_000),
-		SharesWithdrawn:       math.NewInt(0),
+		SharesWithdrawn:       math.ZeroInt(),
+		DecSharesWithdrawn:    math_utils.ZeroPrecDec(),
 		SharesCancelled:       math.ZeroInt(),
 	},
 		LOList[0],
@@ -101,7 +104,8 @@ func (s *DexTestSuite) TestGetAllLimitOrders() {
 		TrancheKey:            trancheKeyB,
 		Address:               s.alice.String(),
 		SharesOwned:           math.NewInt(10_000_000),
-		SharesWithdrawn:       math.NewInt(0),
+		SharesWithdrawn:       math.ZeroInt(),
+		DecSharesWithdrawn:    math_utils.ZeroPrecDec(),
 		SharesCancelled:       math.ZeroInt(),
 	},
 		LOList[1],

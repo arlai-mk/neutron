@@ -11,8 +11,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	math_utils "github.com/neutron-org/neutron/v6/utils/math"
-	dextypes "github.com/neutron-org/neutron/v6/x/dex/types"
+	math_utils "github.com/neutron-org/neutron/v11/utils/math"
+	dextypes "github.com/neutron-org/neutron/v11/x/dex/types"
 )
 
 type withdrawLimitOrderTestParams struct {
@@ -58,7 +58,7 @@ func hydrateWithdrawLoTestCase(params map[string]string) withdrawLimitOrderTestP
 		Expired:               parseBool(params["Expired"]),
 		OrderType:             dextypes.LimitOrderType_value[params["OrderType"]],
 	}
-	w.SharedParams.Tick = selltick
+	w.Tick = selltick
 	return w
 }
 
@@ -171,10 +171,10 @@ func (s *DexStateTestSuite) assertWithdrawFilledAmount(params withdrawLimitOrder
 	// pre-withdrawn (filled/2 or 0) + withdrawn (filled/2 or filled) === filled
 	// converted to TokenB
 	price := dextypes.MustCalcPrice(params.Tick)
-	expectedBalanceB := price.MulInt(depositSize.MulRaw(int64(params.Filled)).QuoRaw(100)).Ceil().TruncateInt()
+	expectedBalanceB := price.MulInt(depositSize.MulRaw(int64(params.Filled)).QuoRaw(100)).TruncateInt()
 	expectedBalanceA := depositSize.Sub(depositSize.MulRaw(int64(params.Filled)).QuoRaw(100))
 	// 1 - withdrawn amount
-	s.assertBalanceWithPrecision(s.creator, params.PairID.Token1, expectedBalanceB, 3)
+	s.assertBalance(s.creator, params.PairID.Token1, expectedBalanceB)
 
 	ut, found := s.App.DexKeeper.GetLimitOrderTrancheUser(s.Ctx, s.creator.String(), trancheKey)
 	if params.Expired {
@@ -187,7 +187,10 @@ func (s *DexStateTestSuite) assertWithdrawFilledAmount(params withdrawLimitOrder
 			s.False(found)
 		} else {
 			s.True(found)
-			s.intsApproxEqual("", expectedBalanceA, ut.SharesOwned.Sub(ut.SharesWithdrawn), 1)
+			sharesOwnedDec := math_utils.NewPrecDecFromInt(ut.SharesOwned)
+			remainingShares := sharesOwnedDec.Sub(ut.DecSharesWithdrawn)
+			expectedBalanceADec := math_utils.NewPrecDecFromInt(expectedBalanceA)
+			s.True(expectedBalanceADec.Equal(remainingShares), "Expected Balance A %v != Actual %v", expectedBalanceA, remainingShares)
 		}
 	}
 }
@@ -235,4 +238,6 @@ func TestWithdrawLimitOrder(t *testing.T) {
 			*/
 		})
 	}
+
+	s.TearDownTest()
 }

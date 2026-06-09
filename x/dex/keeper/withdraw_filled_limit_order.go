@@ -4,10 +4,10 @@ import (
 	"context"
 
 	sdkerrors "cosmossdk.io/errors"
-	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v6/x/dex/types"
+	math_utils "github.com/neutron-org/neutron/v11/utils/math"
+	"github.com/neutron-org/neutron/v11/x/dex/types"
 )
 
 // WithdrawFilledLimitOrderCore handles MsgWithdrawFilledLimitOrder including bank operations and event emissions.
@@ -15,20 +15,20 @@ func (k Keeper) WithdrawFilledLimitOrderCore(
 	goCtx context.Context,
 	trancheKey string,
 	callerAddr sdk.AccAddress,
-) (takerCoinOut, makerCoinOut sdk.Coin, err error) {
+) (takerCoinOut, makerCoinOut types.PrecDecCoin, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	takerCoinOut, makerCoinOut, err = k.ExecuteWithdrawFilledLimitOrder(ctx, trancheKey, callerAddr)
 	if err != nil {
-		return sdk.Coin{}, sdk.Coin{}, err
+		return types.PrecDecCoin{}, types.PrecDecCoin{}, err
 	}
 
 	// NOTE: it is possible for coinTakerDenomOut xor coinMakerDenomOut to be zero. These are removed by the sanitize call in sdk.NewCoins
 	// ExecuteWithdrawFilledLimitOrder ensures that at least one of these has am amount > 0.
-	coins := sdk.NewCoins(takerCoinOut, makerCoinOut)
-	ctx.EventManager().EmitEvents(types.GetEventsWithdrawnAmount(sdk.NewCoins(takerCoinOut)))
-	if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, callerAddr, coins); err != nil {
-		return sdk.Coin{}, sdk.Coin{}, err
+	coins := types.NewPrecDecCoins(takerCoinOut, makerCoinOut)
+	ctx.EventManager().EmitEvents(types.GetEventsWithdrawnAmount(sdk.NewCoins(takerCoinOut.TruncateToCoin())))
+	if err := k.SendFractionalCoinsFromDexToAccount(ctx, callerAddr, coins); err != nil {
+		return types.PrecDecCoin{}, types.PrecDecCoin{}, err
 	}
 
 	makerDenom := makerCoinOut.Denom
@@ -56,7 +56,7 @@ func (k Keeper) ExecuteWithdrawFilledLimitOrder(
 	ctx sdk.Context,
 	trancheKey string,
 	callerAddr sdk.AccAddress,
-) (takerCoinOut, makerCoinOut sdk.Coin, err error) {
+) (takerCoinOut, makerCoinOut types.PrecDecCoin, err error) {
 	trancheUser, found := k.GetLimitOrderTrancheUser(
 		ctx,
 		callerAddr.String(),
@@ -77,25 +77,32 @@ func (k Keeper) ExecuteWithdrawFilledLimitOrder(
 		},
 	)
 
-	amountOutTokenOut := math.ZeroInt()
-	remainingTokenIn := math.ZeroInt()
+	amountOutTokenOut := math_utils.ZeroPrecDec()
+	remainingTokenIn := math_utils.ZeroPrecDec()
 	// It's possible that a TrancheUser exists but tranche does not if LO was filled entirely through a swap
 	if found {
-		var amountOutTokenIn math.Int
-		amountOutTokenIn, amountOutTokenOut = tranche.Withdraw(trancheUser)
+		var amountOutTokenIn math_utils.PrecDec
+		amountOutTokenIn, amountOutTokenOut, err = tranche.Withdraw(trancheUser)
+		if err != nil {
+			return types.PrecDecCoin{}, types.PrecDecCoin{}, err
+		}
 
 		if wasFilled {
 			// This is only relevant for inactive JIT and GoodTil limit orders
-			remainingTokenIn = tranche.RemoveTokenIn(trancheUser)
+			remainingTokenIn, err = tranche.RemoveTokenIn(trancheUser)
+			if err != nil {
+				return types.PrecDecCoin{}, types.PrecDecCoin{}, err
+			}
 			k.UpdateInactiveTranche(ctx, tranche)
 
 			// Since the order has already been filled we treat this as a complete withdrawal
-			trancheUser.SharesWithdrawn = trancheUser.SharesOwned
+			trancheUser.SetSharesWithdrawn(math_utils.NewPrecDecFromInt(trancheUser.SharesOwned))
 
 		} else {
 			// This was an active tranche (still has MakerReserves) and we have only removed TakerReserves; we will save it as an active tranche
 			k.UpdateTranche(ctx, tranche)
-			trancheUser.SharesWithdrawn = trancheUser.SharesWithdrawn.Add(amountOutTokenIn)
+			totalSharesWithdrawn := trancheUser.DecSharesWithdrawn.Add(amountOutTokenIn)
+			trancheUser.SetSharesWithdrawn(totalSharesWithdrawn)
 		}
 
 	}
@@ -106,8 +113,8 @@ func (k Keeper) ExecuteWithdrawFilledLimitOrder(
 		return takerCoinOut, makerCoinOut, types.ErrWithdrawEmptyLimitOrder
 	}
 
-	takerCoinOut = sdk.NewCoin(tradePairID.TakerDenom, amountOutTokenOut)
-	makerCoinOut = sdk.NewCoin(tradePairID.MakerDenom, remainingTokenIn)
+	takerCoinOut = types.NewPrecDecCoin(tradePairID.TakerDenom, amountOutTokenOut)
+	makerCoinOut = types.NewPrecDecCoin(tradePairID.MakerDenom, remainingTokenIn)
 
 	return takerCoinOut, makerCoinOut, nil
 }

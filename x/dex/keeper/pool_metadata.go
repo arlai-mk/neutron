@@ -7,7 +7,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v6/x/dex/types"
+	"github.com/neutron-org/neutron/v11/x/dex/types"
 )
 
 // SetPoolMetadata set a specific poolMetadata in the store
@@ -74,7 +74,7 @@ func (k Keeper) GetAllPoolMetadata(ctx sdk.Context) (list []types.PoolMetadata) 
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.PoolMetadataKeyPrefix))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
-	defer iterator.Close()
+	defer iterator.Close() //nolint:errcheck
 
 	for ; iterator.Valid(); iterator.Next() {
 		var val types.PoolMetadata
@@ -82,7 +82,7 @@ func (k Keeper) GetAllPoolMetadata(ctx sdk.Context) (list []types.PoolMetadata) 
 		list = append(list, val)
 	}
 
-	return
+	return list
 }
 
 // GetPoolMetadataIDBytes returns the byte representation of the ID

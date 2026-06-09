@@ -17,11 +17,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v6/x/cron/types"
+	"github.com/neutron-org/neutron/v11/x/cron/types"
 )
 
 var (
 	LabelExecuteReadySchedules   = "execute_ready_schedules"
+	LabelExecuteCronSchedule     = "execute_cron_schedule"
+	LabelExecuteCronContract     = "execute_cron_contract"
 	LabelScheduleCount           = "schedule_count"
 	LabelScheduleExecutionsCount = "schedule_executions_count"
 
@@ -67,7 +69,7 @@ func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
 // ExecuteReadySchedules gets all schedules that are due for execution (with limit that is equal to Params.Limit)
 // and executes messages in each one
 func (k *Keeper) ExecuteReadySchedules(ctx sdk.Context, executionStage types.ExecutionStage) {
-	telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), LabelExecuteReadySchedules)
+	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), LabelExecuteReadySchedules)
 	schedules := k.getSchedulesReadyForExecution(ctx, executionStage)
 
 	for _, schedule := range schedules {
@@ -77,12 +79,12 @@ func (k *Keeper) ExecuteReadySchedules(ctx sdk.Context, executionStage types.Exe
 }
 
 // AddSchedule adds a new schedule to be executed every certain number of blocks, specified in the `period`.
-// First schedule execution is supposed to be on `now + period` block.
 func (k *Keeper) AddSchedule(
 	ctx sdk.Context,
 	name string,
 	period uint64,
 	msgs []types.MsgExecuteContract,
+	lastExecuteHeight uint64,
 	executionStage types.ExecutionStage,
 ) error {
 	if k.scheduleExists(ctx, name) {
@@ -90,11 +92,10 @@ func (k *Keeper) AddSchedule(
 	}
 
 	schedule := types.Schedule{
-		Name:   name,
-		Period: period,
-		Msgs:   msgs,
-		// let's execute newly added schedule on `now + period` block
-		LastExecuteHeight: uint64(ctx.BlockHeight()), //nolint:gosec
+		Name:              name,
+		Period:            period,
+		Msgs:              msgs,
+		LastExecuteHeight: lastExecuteHeight,
 		ExecutionStage:    executionStage,
 	}
 
@@ -134,7 +135,7 @@ func (k *Keeper) GetAllSchedules(ctx sdk.Context) []types.Schedule {
 	res := make([]types.Schedule, 0)
 
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
-	defer iterator.Close()
+	defer iterator.Close() //nolint:errcheck
 
 	for ; iterator.Valid(); iterator.Next() {
 		var schedule types.Schedule
@@ -157,7 +158,7 @@ func (k *Keeper) getSchedulesReadyForExecution(ctx sdk.Context, executionStage t
 	res := make([]types.Schedule, 0)
 
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
-	defer iterator.Close()
+	defer iterator.Close() //nolint:errcheck
 
 	for ; iterator.Valid(); iterator.Next() {
 		var schedule types.Schedule
@@ -182,12 +183,14 @@ func (k *Keeper) getSchedulesReadyForExecution(ctx sdk.Context, executionStage t
 func (k *Keeper) executeSchedule(ctx sdk.Context, schedule types.Schedule) error {
 	// Even if contract execution returned an error, we still increase the height
 	// and execute it after this interval
+	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), LabelExecuteCronSchedule, schedule.Name)
 	schedule.LastExecuteHeight = uint64(ctx.BlockHeight()) //nolint:gosec
 	k.storeSchedule(ctx, schedule)
 
 	cacheCtx, writeFn := ctx.CacheContext()
 
 	for idx, msg := range schedule.Msgs {
+		startTimeContract := time.Now()
 		executeMsg := wasmtypes.MsgExecuteContract{
 			Sender:   k.accountKeeper.GetModuleAddress(types.ModuleName).String(),
 			Contract: msg.Contract,
@@ -195,6 +198,7 @@ func (k *Keeper) executeSchedule(ctx sdk.Context, schedule types.Schedule) error
 			Funds:    sdk.NewCoins(),
 		}
 		_, err := k.WasmMsgServer.ExecuteContract(cacheCtx, &executeMsg)
+		telemetry.ModuleMeasureSince(types.ModuleName, startTimeContract, LabelExecuteCronContract, schedule.Name, msg.Contract)
 		if err != nil {
 			ctx.Logger().Info("executeSchedule: failed to execute contract msg",
 				"schedule_name", schedule.Name,
@@ -205,6 +209,7 @@ func (k *Keeper) executeSchedule(ctx sdk.Context, schedule types.Schedule) error
 			)
 			return err
 		}
+
 	}
 
 	// only save state if all the messages in a schedule were executed successfully

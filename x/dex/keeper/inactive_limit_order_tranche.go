@@ -5,7 +5,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v6/x/dex/types"
+	"github.com/neutron-org/neutron/v11/x/dex/types"
 )
 
 // SetInactiveLimitOrderTranche set a specific inactiveLimitOrderTranche in the store from its index
@@ -47,7 +47,7 @@ func (k Keeper) GetAllInactiveLimitOrderTranche(ctx sdk.Context) (list []*types.
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.InactiveLimitOrderTrancheKeyPrefix))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
-	defer iterator.Close()
+	defer iterator.Close() //nolint:errcheck
 
 	for ; iterator.Valid(); iterator.Next() {
 		val := &types.LimitOrderTranche{}
@@ -55,7 +55,7 @@ func (k Keeper) GetAllInactiveLimitOrderTranche(ctx sdk.Context) (list []*types.
 		list = append(list, val)
 	}
 
-	return
+	return list
 }
 
 // UpdateInactiveTranche handles the logic for all updates to InactiveLimitOrderTranches

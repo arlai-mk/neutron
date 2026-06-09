@@ -1,14 +1,14 @@
 package keeper
 
 import (
-	sdkerrors "cosmossdk.io/errors"
-	"cosmossdk.io/math"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"golang.org/x/exp/slices"
+	"slices"
 
-	math_utils "github.com/neutron-org/neutron/v6/utils/math"
-	"github.com/neutron-org/neutron/v6/x/dex/types"
-	"github.com/neutron-org/neutron/v6/x/dex/utils"
+	sdkerrors "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	math_utils "github.com/neutron-org/neutron/v11/utils/math"
+	"github.com/neutron-org/neutron/v11/x/dex/types"
+	"github.com/neutron-org/neutron/v11/x/dex/utils"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -51,7 +51,7 @@ func (k Keeper) GetCurrTickIndexTakerToMakerNormalized(
 
 func (k Keeper) GetCurrLiq(ctx sdk.Context, tradePairID *types.TradePairID) *types.TickLiquidity {
 	ti := k.NewTickIterator(ctx, tradePairID)
-	defer ti.Close()
+	defer ti.Close() //nolint:errcheck
 	for ; ti.Valid(); ti.Next() {
 		tick := ti.Value()
 		trancheMaybe := tick.GetLimitOrderTranche()
@@ -114,7 +114,7 @@ func (k Keeper) IsBehindEnemyLines(ctx sdk.Context, tradePairID *types.TradePair
 	return false
 }
 
-func (k Keeper) IsPoolBehindEnemyLines(ctx sdk.Context, pairID *types.PairID, tickIndex int64, fee uint64, amount0, amount1 math.Int) bool {
+func (k Keeper) IsPoolBehindEnemyLines(ctx sdk.Context, pairID *types.PairID, tickIndex int64, fee uint64, amount0, amount1 math_utils.PrecDec) bool {
 	if amount0.IsPositive() {
 		tradePairID0 := types.NewTradePairIDFromMaker(pairID, pairID.Token0)
 		tick0 := tickIndex*-1 + utils.MustSafeUint64ToInt64(fee)

@@ -5,11 +5,11 @@ import (
 
 	"cosmossdk.io/log"
 	metrics2 "cosmossdk.io/store/metrics"
-	adminmoduletypes "github.com/cosmos/admin-module/v2/x/adminmodule/types"
 	db2 "github.com/cosmos/cosmos-db"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
+	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
@@ -19,8 +19,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/neutron-org/neutron/v6/x/interchainqueries/keeper"
-	"github.com/neutron-org/neutron/v6/x/interchainqueries/types"
+	"github.com/neutron-org/neutron/v11/x/interchainqueries/keeper"
+	"github.com/neutron-org/neutron/v11/x/interchainqueries/types"
 )
 
 func InterchainQueriesKeeper(
@@ -51,7 +51,7 @@ func InterchainQueriesKeeper(
 		contractManager,
 		headerVerifier,
 		txVerifier,
-		authtypes.NewModuleAddress(adminmoduletypes.ModuleName).String(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())

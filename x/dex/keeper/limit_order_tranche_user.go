@@ -1,12 +1,14 @@
 package keeper
 
 import (
+	sdkerrors "cosmossdk.io/errors"
 	"cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/neutron-org/neutron/v6/x/dex/types"
+	math_utils "github.com/neutron-org/neutron/v11/utils/math"
+	"github.com/neutron-org/neutron/v11/x/dex/types"
 )
 
 func (k Keeper) GetOrInitLimitOrderTrancheUser(
@@ -16,22 +18,27 @@ func (k Keeper) GetOrInitLimitOrderTrancheUser(
 	trancheKey string,
 	orderType types.LimitOrderType,
 	receiver string,
-) *types.LimitOrderTrancheUser {
+) (*types.LimitOrderTrancheUser, error) {
 	userShareData, found := k.GetLimitOrderTrancheUser(ctx, receiver, trancheKey)
 
-	if !found {
-		return &types.LimitOrderTrancheUser{
-			TrancheKey:            trancheKey,
-			Address:               receiver,
-			SharesOwned:           math.ZeroInt(),
-			SharesWithdrawn:       math.ZeroInt(),
-			TickIndexTakerToMaker: tickIndex,
-			TradePairId:           tradePairID,
-			OrderType:             orderType,
-		}
+	if found {
+		if userShareData.TradePairId.Equal(*tradePairID) && userShareData.TickIndexTakerToMaker == tickIndex {
+			return userShareData, nil
+		} // else
+		// This case should never happen, but it's here for extra safety
+		return nil, sdkerrors.Wrapf(types.ErrDuplicateTrancheKey, "tranche key already exists for different trade pair id or tick index")
 	}
 
-	return userShareData
+	return &types.LimitOrderTrancheUser{
+		TrancheKey:            trancheKey,
+		Address:               receiver,
+		SharesOwned:           math.ZeroInt(),
+		SharesWithdrawn:       math.ZeroInt(),
+		DecSharesWithdrawn:    math_utils.ZeroPrecDec(),
+		TickIndexTakerToMaker: tickIndex,
+		TradePairId:           tradePairID,
+		OrderType:             orderType,
+	}, nil
 }
 
 // SetLimitOrderTrancheUser set a specific LimitOrderTrancheUser in the store from its index
@@ -106,7 +113,7 @@ func (k Keeper) GetAllLimitOrderTrancheUser(ctx sdk.Context) (list []*types.Limi
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.LimitOrderTrancheUserKeyPrefix))
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
-	defer iterator.Close()
+	defer iterator.Close() //nolint:errcheck
 
 	for ; iterator.Valid(); iterator.Next() {
 		val := &types.LimitOrderTrancheUser{}
@@ -114,7 +121,7 @@ func (k Keeper) GetAllLimitOrderTrancheUser(ctx sdk.Context) (list []*types.Limi
 		list = append(list, val)
 	}
 
-	return
+	return list
 }
 
 func (k Keeper) GetAllLimitOrderTrancheUserForAddress(
@@ -125,7 +132,7 @@ func (k Keeper) GetAllLimitOrderTrancheUserForAddress(
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), addressPrefix)
 	iterator := storetypes.KVStorePrefixIterator(store, []byte{})
 
-	defer iterator.Close()
+	defer iterator.Close() //nolint:errcheck
 
 	for ; iterator.Valid(); iterator.Next() {
 		val := &types.LimitOrderTrancheUser{}
@@ -133,5 +140,5 @@ func (k Keeper) GetAllLimitOrderTrancheUserForAddress(
 		list = append(list, val)
 	}
 
-	return
+	return list
 }
